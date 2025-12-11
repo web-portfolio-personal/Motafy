@@ -75,17 +75,41 @@ export default function TrackCard({
     return (
       <div className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg transition-colors group">
         <span className="text-sm text-white/40 w-5">{index + 1}</span>
-        <img
-          src={track.album?.images?.[2]?.url || track.album?.images?.[0]?.url}
-          alt={track.name}
-          className="w-10 h-10 rounded object-cover"
-        />
+        <div className="relative">
+          <img
+            src={track.album?.images?.[2]?.url || track.album?.images?.[0]?.url}
+            alt={track.name}
+            className={`w-10 h-10 rounded object-cover ${isCurrentTrack ? 'ring-2 ring-spotify-green' : ''}`}
+          />
+          {track.preview_url && (
+            <button
+              onClick={handlePlay}
+              className="absolute inset-0 flex items-center justify-center bg-black/50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              {isThisPlaying ? (
+                <FiPause className="h-4 w-4 text-white" />
+              ) : (
+                <FiPlay className="h-4 w-4 text-white ml-0.5" />
+              )}
+            </button>
+          )}
+        </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-white truncate">{track.name}</p>
+          <p className={`text-sm truncate ${isCurrentTrack ? 'text-spotify-green' : 'text-white'}`}>{track.name}</p>
           <p className="text-xs text-white/50 truncate">
             {track.artists?.map(a => a.name).join(', ')}
           </p>
         </div>
+        {track.preview_url && (
+          <button
+            onClick={handlePlay}
+            className={`p-1.5 rounded-full transition-colors ${
+              isThisPlaying ? 'text-spotify-green' : 'text-white/30 hover:text-white/60'
+            }`}
+          >
+            {isThisPlaying ? <FiPause className="h-4 w-4" /> : <FiPlay className="h-4 w-4" />}
+          </button>
+        )}
         <button
           onClick={() => toggleFavorite(track)}
           className={`p-1.5 rounded-full transition-colors ${
@@ -120,16 +144,16 @@ export default function TrackCard({
         {index + 1}
       </span>
 
-      <div className="relative group/play">
+      <div className="relative group/play flex-shrink-0">
         <img
           src={track.album?.images?.[1]?.url || track.album?.images?.[0]?.url}
           alt={track.name}
           className={`w-12 h-12 rounded-lg object-cover ${isCurrentTrack ? 'ring-2 ring-spotify-green' : ''}`}
         />
-        {track.preview_url && (
+        {track.preview_url ? (
           <button
             onClick={handlePlay}
-            className={`absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg transition-opacity ${
+            className={`absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg transition-all hover:bg-black/70 ${
               isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover/play:opacity-100'
             }`}
           >
@@ -139,6 +163,12 @@ export default function TrackCard({
               <FiPlay className="h-5 w-5 text-white ml-0.5" />
             )}
           </button>
+        ) : null}
+        {/* Indicador visual de que se puede reproducir */}
+        {track.preview_url && !isThisPlaying && (
+          <div className="absolute bottom-1 right-1 w-4 h-4 bg-spotify-green rounded-full flex items-center justify-center opacity-70">
+            <FiPlay className="h-2 w-2 text-black ml-0.5" />
+          </div>
         )}
       </div>
 
@@ -168,12 +198,31 @@ export default function TrackCard({
       </div>
 
       <div className="flex items-center gap-1">
+        {/* Botón de play siempre visible */}
+        {track.preview_url && (
+          <button
+            onClick={handlePlay}
+            className={`p-2 rounded-full transition-all ${
+              isThisPlaying 
+                ? 'text-spotify-green bg-spotify-green/20' 
+                : 'text-white/50 hover:text-spotify-green hover:bg-spotify-green/10'
+            }`}
+            title={isThisPlaying ? 'Pausar' : 'Reproducir preview'}
+          >
+            {isThisPlaying ? (
+              <FiPause className="h-5 w-5" />
+            ) : (
+              <FiPlay className="h-5 w-5" />
+            )}
+          </button>
+        )}
+
         <button
           onClick={() => toggleFavorite(track)}
           className={`p-2 rounded-full transition-all ${
             favorite 
               ? 'text-spotify-green hover:scale-110' 
-              : 'text-white/30 hover:text-white/60 opacity-0 group-hover:opacity-100'
+              : 'text-white/30 hover:text-white/60'
           }`}
           title={favorite ? 'Quitar de favoritos' : 'Añadir a favoritos'}
         >
