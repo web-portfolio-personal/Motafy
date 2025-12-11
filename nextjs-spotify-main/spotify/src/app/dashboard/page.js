@@ -29,7 +29,8 @@ export default function DashboardPage() {
     updatePreferences,
     generatePlaylist,
     isGenerating,
-    playlist
+    playlist,
+    trackActivity
   } = usePlaylist();
   const toast = useToast();
 
@@ -44,8 +45,14 @@ export default function DashboardPage() {
 
   const handleGenerate = async () => {
     try {
-      await generatePlaylist();
+      const result = await generatePlaylist();
       setShowTips(false);
+
+      // Registrar actividad
+      if (trackActivity && result?.length > 0) {
+        trackActivity('playlist_generated', { trackCount: result.length });
+      }
+
       toast.success('¡Playlist generada con éxito!');
     } catch (error) {
       console.error('Error generating playlist:', error);

@@ -3,104 +3,101 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  FiMusic, FiUser, FiHeart, FiPlay, FiChevronRight,
-  FiAward, FiTrendingUp, FiClock, FiDisc, FiStar,
-  FiShare2, FiDownload, FiX
+  FiMusic, FiUser, FiHeart, FiChevronRight, FiChevronLeft,
+  FiAward, FiTrendingUp, FiClock, FiStar, FiX, FiPlay
 } from 'react-icons/fi';
 import { useAuth } from '@/context/AuthContext';
 import { usePlaylist } from '@/context/PlaylistContext';
-import { useSpotifyApi } from '@/hooks/useSpotifyApi';
-import Header from '@/components/layout/Header';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 const SLIDES = [
-  { id: 'intro', bg: 'from-purple-600 via-pink-600 to-red-600' },
-  { id: 'top-artist', bg: 'from-green-600 via-emerald-600 to-teal-600' },
-  { id: 'top-tracks', bg: 'from-blue-600 via-indigo-600 to-purple-600' },
-  { id: 'genres', bg: 'from-orange-600 via-red-600 to-pink-600' },
-  { id: 'listening-stats', bg: 'from-cyan-600 via-blue-600 to-indigo-600' },
-  { id: 'top-5', bg: 'from-pink-600 via-purple-600 to-indigo-600' },
-  { id: 'summary', bg: 'from-spotify-green via-green-500 to-emerald-600' },
+  { id: 'intro', bg: 'from-purple-600 via-pink-600 to-red-500' },
+  { id: 'stats-overview', bg: 'from-blue-600 via-cyan-600 to-teal-500' },
+  { id: 'top-artists', bg: 'from-green-600 via-emerald-500 to-teal-500' },
+  { id: 'favorite-genres', bg: 'from-orange-500 via-red-500 to-pink-500' },
+  { id: 'activity', bg: 'from-indigo-600 via-purple-600 to-pink-500' },
+  { id: 'summary', bg: 'from-spotify-green via-green-500 to-emerald-500' },
 ];
 
 export default function WrappedPage() {
   const router = useRouter();
   const { isAuthenticated, loading: authLoading, user } = useAuth();
-  const { favorites } = usePlaylist();
-  const { getTopTracks, getTopArtists } = useSpotifyApi();
+  const { favorites, stats, getActivityByDay, trackWrappedView, playlistHistory } = usePlaylist();
 
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [wrappedData, setWrappedData] = useState(null);
   const [animationPhase, setAnimationPhase] = useState(0);
   const [isStarted, setIsStarted] = useState(false);
+  const [wrappedData, setWrappedData] = useState(null);
 
-  // Cargar datos del wrapped
+  // Calcular datos del wrapped basados en las stats del usuario
   useEffect(() => {
-    const loadWrappedData = async () => {
-      if (!isAuthenticated) return;
+    if (!isAuthenticated) return;
 
-      try {
-        const [topTracksShort, topTracksLong, topArtistsShort, topArtistsLong] = await Promise.all([
-          getTopTracks('short_term', 50),
-          getTopTracks('long_term', 50),
-          getTopArtists('short_term', 20),
-          getTopArtists('long_term', 50)
-        ]);
+    // Procesar favoritos para obtener top artistas y géneros
+    const artistCount = {};
+    const genreEstimate = {};
 
-        // Procesar géneros
-        const genreCount = {};
-        topArtistsLong?.items?.forEach(artist => {
-          artist.genres?.forEach(genre => {
-            genreCount[genre] = (genreCount[genre] || 0) + 1;
-          });
-        });
+    favorites.forEach(track => {
+      const artistName = track.artists?.[0]?.name || 'Desconocido';
+      artistCount[artistName] = (artistCount[artistName] || 0) + 1;
 
-        const topGenres = Object.entries(genreCount)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 5)
-          .map(([name, count]) => ({ name, count }));
-
-        // Calcular minutos estimados (asumiendo 3.5 min por canción promedio)
-        const estimatedMinutes = (topTracksLong?.items?.length || 0) * 3.5 * 30;
-
-        setWrappedData({
-          topArtist: topArtistsShort?.items?.[0],
-          topArtists: topArtistsLong?.items?.slice(0, 5) || [],
-          topTracks: topTracksShort?.items?.slice(0, 10) || [],
-          topTracksAllTime: topTracksLong?.items?.slice(0, 5) || [],
-          topGenres,
-          stats: {
-            totalArtists: topArtistsLong?.items?.length || 0,
-            totalTracks: topTracksLong?.items?.length || 0,
-            estimatedMinutes: Math.round(estimatedMinutes),
-            favoriteCount: favorites.length
-          }
-        });
-      } catch (error) {
-        console.error('Error loading wrapped data:', error);
-      } finally {
-        setIsLoading(false);
+      // Estimar género por nombre de artista (simplificado)
+      const artistLower = artistName.toLowerCase();
+      if (artistLower.includes('dean martin') || artistLower.includes('sinatra') || artistLower.includes('nat king')) {
+        genreEstimate['Jazz/Clásicos'] = (genreEstimate['Jazz/Clásicos'] || 0) + 1;
+      } else if (artistLower.includes('bad bunny') || artistLower.includes('j balvin') || artistLower.includes('ozuna')) {
+        genreEstimate['Reggaeton'] = (genreEstimate['Reggaeton'] || 0) + 1;
+      } else {
+        genreEstimate['Pop/Otros'] = (genreEstimate['Pop/Otros'] || 0) + 1;
       }
-    };
+    });
 
-    loadWrappedData();
-  }, [isAuthenticated, getTopTracks, getTopArtists, favorites.length]);
+    // Top artistas
+    const topArtists = Object.entries(artistCount)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: Math.round((count / Math.max(favorites.length, 1)) * 100)
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    // Top géneros
+    const topGenres = Object.entries(genreEstimate)
+      .map(([name, count]) => ({
+        name,
+        count,
+        percentage: Math.round((count / Math.max(favorites.length, 1)) * 100)
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    // Actividad
+    const activityByDay = getActivityByDay();
+
+    setWrappedData({
+      topArtists,
+      topGenres,
+      activityByDay,
+      totalFavorites: favorites.length,
+      totalPlaylists: stats.playlistsGenerated,
+      totalSongs: stats.songsGenerated,
+      totalInteractions: stats.totalInteractions
+    });
+  }, [isAuthenticated, favorites, stats, getActivityByDay]);
 
   // Animación de fase dentro de cada slide
   useEffect(() => {
     if (!isStarted) return;
 
     setAnimationPhase(0);
-    const timer1 = setTimeout(() => setAnimationPhase(1), 300);
-    const timer2 = setTimeout(() => setAnimationPhase(2), 600);
-    const timer3 = setTimeout(() => setAnimationPhase(3), 900);
+    const timers = [
+      setTimeout(() => setAnimationPhase(1), 200),
+      setTimeout(() => setAnimationPhase(2), 500),
+      setTimeout(() => setAnimationPhase(3), 800),
+      setTimeout(() => setAnimationPhase(4), 1100),
+    ];
 
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-    };
+    return () => timers.forEach(clearTimeout);
   }, [currentSlide, isStarted]);
 
   const nextSlide = useCallback(() => {
@@ -115,19 +112,62 @@ export default function WrappedPage() {
     }
   }, [currentSlide]);
 
+  const handleStart = () => {
+    trackWrappedView();
+    setIsStarted(true);
+  };
+
   // Protección de ruta
   if (!authLoading && !isAuthenticated) {
     router.push('/');
     return null;
   }
 
-  if (authLoading || isLoading) {
+  if (authLoading) {
     return (
-      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
-        <div className="text-center">
-          <LoadingSpinner size="xl" />
-          <p className="mt-4 text-[var(--foreground-secondary)]">Preparando tu Wrapped...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-pink-900 to-red-900 flex items-center justify-center">
+        <LoadingSpinner size="xl" />
+      </div>
+    );
+  }
+
+  // Verificar si hay datos suficientes
+  const hasEnoughData = favorites.length > 0 || stats.totalInteractions > 0;
+
+  // Pantalla cuando no hay datos
+  if (!isStarted && !hasEnoughData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-pink-900 to-red-900 flex flex-col">
+        <button
+          onClick={() => router.push('/dashboard')}
+          className="absolute top-4 right-4 z-50 p-2 bg-black/20 hover:bg-black/40 rounded-full transition-colors"
+        >
+          <FiX className="h-6 w-6 text-white" />
+        </button>
+
+        <main className="flex-1 flex items-center justify-center p-6">
+          <div className="text-center max-w-lg mx-auto">
+            <div className="mb-8 relative">
+              <div className="w-32 h-32 mx-auto bg-white/10 rounded-full flex items-center justify-center">
+                <FiMusic className="h-16 w-16 text-white/50" />
+              </div>
+            </div>
+
+            <h1 className="text-3xl sm:text-4xl font-black text-white mb-4">
+              ¡Aún no tienes historial!
+            </h1>
+            <p className="text-lg text-white/70 mb-8">
+              Genera algunas playlists, guarda canciones en favoritos y vuelve para ver tu Wrapped personalizado 🎵
+            </p>
+
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="px-8 py-4 bg-spotify-green text-black font-bold text-lg rounded-full hover:scale-105 transition-transform"
+            >
+              Ir a explorar
+            </button>
+          </div>
+        </main>
       </div>
     );
   }
@@ -135,37 +175,50 @@ export default function WrappedPage() {
   // Pantalla de inicio
   if (!isStarted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-pink-900 to-red-900 flex flex-col">
-        <Header />
-        <main className="flex-1 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-pink-900 to-red-900 flex flex-col overflow-hidden">
+        <button
+          onClick={() => router.push('/dashboard')}
+          className="absolute top-4 right-4 z-50 p-2 bg-black/20 hover:bg-black/40 rounded-full transition-colors"
+        >
+          <FiX className="h-6 w-6 text-white" />
+        </button>
+
+        {/* Efectos de fondo animados */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-1/4 -left-20 w-96 h-96 bg-purple-500/30 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-pink-500/30 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-red-500/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '0.5s' }} />
+        </div>
+
+        <main className="flex-1 flex items-center justify-center p-6 relative z-10">
           <div className="text-center max-w-lg mx-auto">
             <div className="mb-8 relative">
-              <div className="w-32 h-32 mx-auto bg-gradient-to-br from-spotify-green to-green-400 rounded-full flex items-center justify-center animate-pulse">
-                <FiMusic className="h-16 w-16 text-black" />
+              <div className="w-40 h-40 mx-auto bg-gradient-to-br from-spotify-green to-green-400 rounded-full flex items-center justify-center shadow-2xl shadow-spotify-green/30 animate-bounce" style={{ animationDuration: '2s' }}>
+                <FiMusic className="h-20 w-20 text-black" />
               </div>
-              <div className="absolute -inset-4 bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 rounded-full blur-xl opacity-30 animate-pulse" />
+              <div className="absolute inset-0 w-40 h-40 mx-auto bg-spotify-green/30 rounded-full blur-2xl animate-ping" style={{ animationDuration: '2s' }} />
             </div>
 
-            <h1 className="text-4xl sm:text-5xl font-black text-white mb-4">
+            <h1 className="text-5xl sm:text-6xl font-black text-white mb-4 animate-fade-in">
               Tu <span className="text-transparent bg-clip-text bg-gradient-to-r from-spotify-green to-green-300">Wrapped</span>
             </h1>
-            <p className="text-xl text-white/70 mb-8">
+            <p className="text-xl text-white/70 mb-8 animate-fade-in" style={{ animationDelay: '0.3s' }}>
               Descubre tu año musical en Motafy
             </p>
 
             <button
-              onClick={() => setIsStarted(true)}
-              className="group relative px-8 py-4 bg-spotify-green text-black font-bold text-lg rounded-full hover:scale-105 transition-transform overflow-hidden"
+              onClick={handleStart}
+              className="group relative px-10 py-5 bg-spotify-green text-black font-bold text-xl rounded-full hover:scale-105 transition-all duration-300 shadow-lg shadow-spotify-green/30 overflow-hidden"
             >
-              <span className="relative z-10 flex items-center gap-2">
+              <span className="relative z-10 flex items-center gap-3">
+                <FiPlay className="h-6 w-6" />
                 Comenzar
-                <FiChevronRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </span>
               <div className="absolute inset-0 bg-gradient-to-r from-spotify-green-light to-spotify-green opacity-0 group-hover:opacity-100 transition-opacity" />
             </button>
 
-            <p className="mt-6 text-sm text-white/40">
-              Basado en tus datos de Spotify
+            <p className="mt-8 text-sm text-white/40 animate-fade-in" style={{ animationDelay: '0.6s' }}>
+              Basado en tu actividad en Motafy
             </p>
           </div>
         </main>
@@ -174,173 +227,83 @@ export default function WrappedPage() {
   }
 
   const currentSlideData = SLIDES[currentSlide];
+  const isLastSlide = currentSlide === SLIDES.length - 1;
+  const isFirstSlide = currentSlide === 0;
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br ${currentSlideData.bg} transition-all duration-700 flex flex-col relative overflow-hidden`}>
+    <div className={`min-h-screen bg-gradient-to-br ${currentSlideData.bg} transition-all duration-1000 flex flex-col relative overflow-hidden`}>
       {/* Efectos de fondo */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 -left-1/4 w-1/2 h-1/2 bg-white/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-black/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 -left-1/4 w-1/2 h-1/2 bg-white/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-black/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
       </div>
 
-      {/* Botón cerrar */}
-      <button
-        onClick={() => router.push('/dashboard')}
-        className="absolute top-4 right-4 z-50 p-2 bg-black/20 hover:bg-black/40 rounded-full transition-colors"
-      >
-        <FiX className="h-6 w-6 text-white" />
-      </button>
+      {/* Header con botón cerrar */}
+      <div className="relative z-50 p-4 flex justify-between items-center">
+        <button
+          onClick={() => router.push('/dashboard')}
+          className="p-2 bg-black/20 hover:bg-black/40 rounded-full transition-colors"
+        >
+          <FiX className="h-6 w-6 text-white" />
+        </button>
 
-      {/* Indicadores de progreso */}
-      <div className="absolute top-4 left-4 right-16 z-50 flex gap-1">
-        {SLIDES.map((_, index) => (
-          <div
-            key={index}
-            className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-              index < currentSlide ? 'bg-white' : 
-              index === currentSlide ? 'bg-white/70' : 'bg-white/20'
-            }`}
-          />
-        ))}
+        {/* Indicadores de progreso */}
+        <div className="flex-1 flex gap-1 mx-4 max-w-md">
+          {SLIDES.map((_, index) => (
+            <div
+              key={index}
+              className={`h-1 flex-1 rounded-full transition-all duration-500 ${
+                index < currentSlide ? 'bg-white' : 
+                index === currentSlide ? 'bg-white/80' : 'bg-white/20'
+              }`}
+            />
+          ))}
+        </div>
+
+        <div className="w-10" /> {/* Spacer */}
       </div>
 
       {/* Contenido del slide */}
-      <main className="flex-1 flex items-center justify-center p-6 pt-16 relative z-10">
+      <main className="flex-1 flex items-center justify-center p-6 relative z-10">
         <div className="w-full max-w-lg mx-auto">
 
           {/* Slide 0: Intro */}
           {currentSlide === 0 && (
             <div className="text-center">
-              <p className={`text-white/60 text-sm uppercase tracking-wider mb-4 transition-all duration-500 ${animationPhase >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-                Hola, {user?.display_name?.split(' ')[0]}
+              <p className={`text-white/60 text-sm uppercase tracking-widest mb-6 transition-all duration-700 ${animationPhase >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+                Hola, {user?.display_name?.split(' ')[0]} 👋
               </p>
-              <h1 className={`text-4xl sm:text-6xl font-black text-white mb-6 transition-all duration-500 delay-150 ${animationPhase >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-                Este ha sido tu año
+              <h1 className={`text-4xl sm:text-6xl font-black text-white mb-6 leading-tight transition-all duration-700 delay-200 ${animationPhase >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+                Este es tu
+                <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-orange-400">resumen</span>
               </h1>
-              <p className={`text-xl text-white/80 transition-all duration-500 delay-300 ${animationPhase >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-                Vamos a ver qué has estado escuchando
+              <p className={`text-xl text-white/80 transition-all duration-700 delay-400 ${animationPhase >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+                Veamos qué has estado haciendo en Motafy
               </p>
             </div>
           )}
 
-          {/* Slide 1: Top Artist */}
-          {currentSlide === 1 && wrappedData?.topArtist && (
+          {/* Slide 1: Stats Overview */}
+          {currentSlide === 1 && wrappedData && (
             <div className="text-center">
-              <p className={`text-white/60 text-sm uppercase tracking-wider mb-6 transition-all duration-500 ${animationPhase >= 1 ? 'opacity-100' : 'opacity-0'}`}>
-                Tu artista favorito
-              </p>
-              <div className={`relative mb-6 transition-all duration-700 delay-150 ${animationPhase >= 2 ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}>
-                <div className="w-48 h-48 mx-auto rounded-full overflow-hidden ring-4 ring-white/20 shadow-2xl">
-                  {wrappedData.topArtist.images?.[0]?.url ? (
-                    <img
-                      src={wrappedData.topArtist.images[0].url}
-                      alt={wrappedData.topArtist.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-white/10 flex items-center justify-center">
-                      <FiUser className="h-20 w-20 text-white/50" />
-                    </div>
-                  )}
-                </div>
-                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-spotify-green text-black px-4 py-1 rounded-full text-sm font-bold">
-                  #1
-                </div>
-              </div>
-              <h2 className={`text-3xl sm:text-4xl font-black text-white mb-2 transition-all duration-500 delay-300 ${animationPhase >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-                {wrappedData.topArtist.name}
-              </h2>
-              <p className={`text-white/60 transition-all duration-500 delay-500 ${animationPhase >= 3 ? 'opacity-100' : 'opacity-0'}`}>
-                {wrappedData.topArtist.followers?.total?.toLocaleString()} seguidores
-              </p>
-            </div>
-          )}
-
-          {/* Slide 2: Top Tracks */}
-          {currentSlide === 2 && (
-            <div>
-              <p className={`text-white/60 text-sm uppercase tracking-wider mb-4 text-center transition-all duration-500 ${animationPhase >= 1 ? 'opacity-100' : 'opacity-0'}`}>
-                Tus canciones más escuchadas
-              </p>
-              <div className="space-y-3">
-                {wrappedData?.topTracks?.slice(0, 5).map((track, index) => (
-                  <div
-                    key={track.id}
-                    className={`flex items-center gap-4 p-3 bg-white/10 rounded-xl backdrop-blur-sm transition-all duration-500 ${
-                      animationPhase >= 2 ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'
-                    }`}
-                    style={{ transitionDelay: `${150 + index * 100}ms` }}
-                  >
-                    <span className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white font-bold">
-                      {index + 1}
-                    </span>
-                    <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
-                      {track.album?.images?.[0]?.url && (
-                        <img src={track.album.images[0].url} alt="" className="w-full h-full object-cover" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-white truncate">{track.name}</p>
-                      <p className="text-sm text-white/60 truncate">{track.artists?.[0]?.name}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Slide 3: Géneros */}
-          {currentSlide === 3 && (
-            <div className="text-center">
-              <p className={`text-white/60 text-sm uppercase tracking-wider mb-6 transition-all duration-500 ${animationPhase >= 1 ? 'opacity-100' : 'opacity-0'}`}>
-                Tus géneros favoritos
-              </p>
-              <div className="space-y-4">
-                {wrappedData?.topGenres?.map((genre, index) => (
-                  <div
-                    key={genre.name}
-                    className={`transition-all duration-500 ${animationPhase >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
-                    style={{ transitionDelay: `${150 + index * 100}ms` }}
-                  >
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-white font-medium capitalize">{genre.name}</span>
-                      <span className="text-spotify-green font-bold">#{index + 1}</span>
-                    </div>
-                    <div className="h-3 bg-white/20 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-spotify-green to-green-300 rounded-full transition-all duration-1000"
-                        style={{
-                          width: animationPhase >= 3 ? `${100 - index * 15}%` : '0%',
-                          transitionDelay: `${300 + index * 100}ms`
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Slide 4: Stats */}
-          {currentSlide === 4 && (
-            <div className="text-center">
-              <p className={`text-white/60 text-sm uppercase tracking-wider mb-8 transition-all duration-500 ${animationPhase >= 1 ? 'opacity-100' : 'opacity-0'}`}>
-                Tus estadísticas
+              <p className={`text-white/60 text-sm uppercase tracking-widest mb-8 transition-all duration-500 ${animationPhase >= 1 ? 'opacity-100' : 'opacity-0'}`}>
+                Tu actividad
               </p>
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { label: 'Artistas', value: wrappedData?.stats?.totalArtists, icon: FiUser },
-                  { label: 'Canciones', value: wrappedData?.stats?.totalTracks, icon: FiMusic },
-                  { label: 'Minutos', value: wrappedData?.stats?.estimatedMinutes?.toLocaleString(), icon: FiClock },
-                  { label: 'Favoritos', value: wrappedData?.stats?.favoriteCount, icon: FiHeart },
-                ].map((stat, index) => (
+                  { value: wrappedData.totalPlaylists, label: 'Playlists', icon: FiMusic, delay: 0 },
+                  { value: wrappedData.totalSongs, label: 'Canciones', icon: FiTrendingUp, delay: 100 },
+                  { value: wrappedData.totalFavorites, label: 'Favoritos', icon: FiHeart, delay: 200 },
+                  { value: wrappedData.totalInteractions, label: 'Interacciones', icon: FiStar, delay: 300 },
+                ].map((stat, idx) => (
                   <div
                     key={stat.label}
-                    className={`p-6 bg-white/10 rounded-2xl backdrop-blur-sm transition-all duration-500 ${animationPhase >= 2 ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}
-                    style={{ transitionDelay: `${150 + index * 100}ms` }}
+                    className={`p-6 bg-white/10 backdrop-blur-sm rounded-2xl transition-all duration-700 ${animationPhase >= 2 ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}
+                    style={{ transitionDelay: `${stat.delay}ms` }}
                   >
-                    <stat.icon className="h-6 w-6 text-spotify-green mx-auto mb-2" />
-                    <div className="text-3xl font-black text-white">{stat.value}</div>
+                    <stat.icon className="h-8 w-8 text-white/60 mx-auto mb-2" />
+                    <div className="text-4xl font-black text-white">{stat.value}</div>
                     <div className="text-sm text-white/60">{stat.label}</div>
                   </div>
                 ))}
@@ -348,73 +311,151 @@ export default function WrappedPage() {
             </div>
           )}
 
-          {/* Slide 5: Top 5 artistas */}
-          {currentSlide === 5 && (
+          {/* Slide 2: Top Artists */}
+          {currentSlide === 2 && wrappedData && (
             <div>
-              <p className={`text-white/60 text-sm uppercase tracking-wider mb-6 text-center transition-all duration-500 ${animationPhase >= 1 ? 'opacity-100' : 'opacity-0'}`}>
-                Tu Top 5 artistas
+              <p className={`text-white/60 text-sm uppercase tracking-widest mb-6 text-center transition-all duration-500 ${animationPhase >= 1 ? 'opacity-100' : 'opacity-0'}`}>
+                Tus artistas favoritos
               </p>
-              <div className="space-y-3">
-                {wrappedData?.topArtists?.map((artist, index) => (
-                  <div
-                    key={artist.id}
-                    className={`flex items-center gap-4 p-3 bg-white/10 rounded-xl backdrop-blur-sm transition-all duration-500 ${
-                      animationPhase >= 2 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'
-                    }`}
-                    style={{ transitionDelay: `${150 + index * 100}ms` }}
-                  >
-                    <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${
-                      index === 0 ? 'bg-yellow-500 text-black' :
-                      index === 1 ? 'bg-gray-300 text-black' :
-                      index === 2 ? 'bg-orange-600 text-white' :
-                      'bg-white/20 text-white'
-                    }`}>
-                      {index + 1}
-                    </span>
-                    <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
-                      {artist.images?.[0]?.url && (
-                        <img src={artist.images[0].url} alt="" className="w-full h-full object-cover" />
-                      )}
+              {wrappedData.topArtists.length > 0 ? (
+                <div className="space-y-3">
+                  {wrappedData.topArtists.map((artist, index) => (
+                    <div
+                      key={artist.name}
+                      className={`flex items-center gap-4 p-4 bg-white/10 backdrop-blur-sm rounded-xl transition-all duration-700 ${
+                        animationPhase >= 2 ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'
+                      }`}
+                      style={{ transitionDelay: `${200 + index * 150}ms` }}
+                    >
+                      <span className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-lg ${
+                        index === 0 ? 'bg-yellow-400 text-black' :
+                        index === 1 ? 'bg-gray-300 text-black' :
+                        index === 2 ? 'bg-orange-500 text-white' :
+                        'bg-white/20 text-white'
+                      }`}>
+                        {index + 1}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-white text-lg truncate">{artist.name}</p>
+                        <p className="text-sm text-white/60">{artist.count} canciones</p>
+                      </div>
+                      <span className="text-spotify-green font-bold text-xl">{artist.percentage}%</span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-white truncate">{artist.name}</p>
-                      <p className="text-sm text-white/60 truncate capitalize">
-                        {artist.genres?.slice(0, 2).join(', ') || 'Artista'}
-                      </p>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <FiUser className="h-16 w-16 text-white/30 mx-auto mb-4" />
+                  <p className="text-white/60">Añade canciones a favoritos para ver tus artistas</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Slide 3: Géneros */}
+          {currentSlide === 3 && wrappedData && (
+            <div className="text-center">
+              <p className={`text-white/60 text-sm uppercase tracking-widest mb-8 transition-all duration-500 ${animationPhase >= 1 ? 'opacity-100' : 'opacity-0'}`}>
+                Tus géneros
+              </p>
+              {wrappedData.topGenres.length > 0 ? (
+                <div className="space-y-6">
+                  {wrappedData.topGenres.map((genre, index) => (
+                    <div
+                      key={genre.name}
+                      className={`transition-all duration-700 ${animationPhase >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+                      style={{ transitionDelay: `${200 + index * 150}ms` }}
+                    >
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-white font-semibold text-lg">{genre.name}</span>
+                        <span className="text-spotify-green font-bold">{genre.percentage}%</span>
+                      </div>
+                      <div className="h-4 bg-white/20 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-spotify-green to-green-300 rounded-full transition-all duration-1000 ease-out"
+                          style={{
+                            width: animationPhase >= 3 ? `${genre.percentage}%` : '0%',
+                            transitionDelay: `${400 + index * 150}ms`
+                          }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12">
+                  <FiMusic className="h-16 w-16 text-white/30 mx-auto mb-4" />
+                  <p className="text-white/60">Explora más música para descubrir tus géneros</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Slide 4: Actividad */}
+          {currentSlide === 4 && wrappedData && (
+            <div className="text-center">
+              <p className={`text-white/60 text-sm uppercase tracking-widest mb-8 transition-all duration-500 ${animationPhase >= 1 ? 'opacity-100' : 'opacity-0'}`}>
+                Tu actividad reciente
+              </p>
+              <div className={`p-6 bg-white/10 backdrop-blur-sm rounded-2xl transition-all duration-700 ${animationPhase >= 2 ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}>
+                <div className="flex items-end justify-between gap-2 h-40 mb-4">
+                  {wrappedData.activityByDay.map((day, index) => {
+                    const maxCount = Math.max(...wrappedData.activityByDay.map(d => d.count), 1);
+                    const height = (day.count / maxCount) * 100;
+
+                    return (
+                      <div key={day.date} className="flex-1 flex flex-col items-center gap-2">
+                        <div className="w-full bg-white/10 rounded-t-lg relative" style={{ height: '120px' }}>
+                          <div
+                            className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-spotify-green to-green-300 rounded-t-lg transition-all duration-1000 ease-out"
+                            style={{
+                              height: animationPhase >= 3 ? `${Math.max(height, 5)}%` : '0%',
+                              transitionDelay: `${300 + index * 100}ms`
+                            }}
+                          />
+                        </div>
+                        <span className="text-xs text-white/60 capitalize">{day.day}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-white/40 text-sm">Últimos 7 días</p>
               </div>
             </div>
           )}
 
-          {/* Slide 6: Summary */}
-          {currentSlide === 6 && (
+          {/* Slide 5: Summary */}
+          {currentSlide === 5 && (
             <div className="text-center">
-              <div className={`mb-6 transition-all duration-500 ${animationPhase >= 1 ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}>
-                <div className="w-24 h-24 mx-auto bg-white/20 rounded-full flex items-center justify-center">
-                  <FiAward className="h-12 w-12 text-white" />
+              <div className={`mb-8 transition-all duration-700 ${animationPhase >= 1 ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
+                <div className="w-28 h-28 mx-auto bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+                  <FiAward className="h-14 w-14 text-white" />
                 </div>
               </div>
-              <h1 className={`text-3xl sm:text-4xl font-black text-white mb-4 transition-all duration-500 delay-150 ${animationPhase >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-                ¡Eso ha sido tu Wrapped!
+              <h1 className={`text-4xl sm:text-5xl font-black text-white mb-4 transition-all duration-700 delay-200 ${animationPhase >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+                ¡Eso es todo!
               </h1>
-              <p className={`text-lg text-white/80 mb-8 transition-all duration-500 delay-300 ${animationPhase >= 3 ? 'opacity-100' : 'opacity-0'}`}>
-                Gracias por usar Motafy, {user?.display_name?.split(' ')[0]}
+              <p className={`text-xl text-white/80 mb-10 transition-all duration-700 delay-400 ${animationPhase >= 3 ? 'opacity-100' : 'opacity-0'}`}>
+                Gracias por usar Motafy, {user?.display_name?.split(' ')[0]} 🎵
               </p>
-              <div className={`flex flex-col sm:flex-row gap-3 justify-center transition-all duration-500 delay-500 ${animationPhase >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
+
+              {/* Botones finales - CON Z-INDEX ALTO */}
+              <div className={`flex flex-col sm:flex-row gap-4 justify-center relative z-50 transition-all duration-700 delay-600 ${animationPhase >= 4 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
                 <button
-                  onClick={() => router.push('/dashboard')}
-                  className="px-6 py-3 bg-white text-black font-bold rounded-full hover:bg-white/90 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push('/dashboard');
+                  }}
+                  className="px-8 py-4 bg-white text-black font-bold rounded-full hover:bg-white/90 transition-all hover:scale-105 shadow-lg"
                 >
                   Volver al Dashboard
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setCurrentSlide(0);
-                    setIsStarted(true);
                   }}
-                  className="px-6 py-3 bg-white/20 text-white font-bold rounded-full hover:bg-white/30 transition-colors"
+                  className="px-8 py-4 bg-white/20 text-white font-bold rounded-full hover:bg-white/30 transition-all hover:scale-105"
                 >
                   Ver de nuevo
                 </button>
@@ -425,29 +466,48 @@ export default function WrappedPage() {
         </div>
       </main>
 
-      {/* Controles de navegación - Áreas táctiles invisibles */}
-      <div className="absolute inset-0 flex z-30" style={{ top: '60px' }}>
-        <button
-          onClick={prevSlide}
-          disabled={currentSlide === 0}
-          className="flex-1 cursor-pointer disabled:cursor-default focus:outline-none"
-          aria-label="Anterior"
-        />
-        <button
-          onClick={nextSlide}
-          disabled={currentSlide === SLIDES.length - 1}
-          className="flex-1 cursor-pointer disabled:cursor-default focus:outline-none"
-          aria-label="Siguiente"
-        />
-      </div>
+      {/* Navegación - Solo si NO es el último slide */}
+      {!isLastSlide && (
+        <div className="absolute inset-0 flex z-20" style={{ top: '80px', bottom: '100px' }}>
+          <button
+            onClick={prevSlide}
+            disabled={isFirstSlide}
+            className="flex-1 cursor-pointer disabled:cursor-default focus:outline-none"
+            aria-label="Anterior"
+          />
+          <button
+            onClick={nextSlide}
+            className="flex-1 cursor-pointer focus:outline-none"
+            aria-label="Siguiente"
+          />
+        </div>
+      )}
 
-      {/* Indicador de toque */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/60 text-sm flex items-center gap-2 z-40">
-        {currentSlide < SLIDES.length - 1 && (
-          <>
+      {/* Controles manuales visibles */}
+      <div className="absolute bottom-6 left-0 right-0 flex justify-center items-center gap-4 z-30">
+        {!isFirstSlide && !isLastSlide && (
+          <button
+            onClick={prevSlide}
+            className="p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+          >
+            <FiChevronLeft className="h-6 w-6 text-white" />
+          </button>
+        )}
+
+        {!isLastSlide && (
+          <div className="flex items-center gap-2 text-white/60 text-sm">
             <span>Toca para continuar</span>
             <FiChevronRight className="h-4 w-4 animate-pulse" />
-          </>
+          </div>
+        )}
+
+        {!isLastSlide && (
+          <button
+            onClick={nextSlide}
+            className="p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+          >
+            <FiChevronRight className="h-6 w-6 text-white" />
+          </button>
         )}
       </div>
     </div>

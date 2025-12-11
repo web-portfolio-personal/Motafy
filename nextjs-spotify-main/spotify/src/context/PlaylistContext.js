@@ -342,6 +342,167 @@ export function PlaylistProvider({ children }) {
     URL.revokeObjectURL(url);
   }, [playlist, preferences]);
 
+  // === SISTEMA DE TRACKING DE ACTIVIDAD ===
+  const [activityLog, setActivityLog] = useState([]);
+  const [stats, setStats] = useState({
+    playlistsGenerated: 0,
+    songsGenerated: 0,
+    likesGiven: 0,
+    wrappedViews: 0,
+    totalInteractions: 0
+  });
+
+  // Cargar actividad y stats de localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const savedActivity = localStorage.getItem('motafy_activity');
+      const savedStats = localStorage.getItem('motafy_stats');
+      if (savedActivity) setActivityLog(JSON.parse(savedActivity));
+      if (savedStats) setStats(JSON.parse(savedStats));
+    } catch (e) {
+      console.error('Error loading activity:', e);
+    }
+  }, []);
+
+  // Registrar actividad
+  const trackActivity = useCallback((type, data = {}) => {
+    const activity = {
+      id: Date.now(),
+      type,
+      timestamp: new Date().toISOString(),
+      ...data
+    };
+
+    setActivityLog(prev => {
+      const newLog = [activity, ...prev].slice(0, 100); // Mantener últimas 100
+      localStorage.setItem('motafy_activity', JSON.stringify(newLog));
+      return newLog;
+    });
+
+    // Actualizar stats
+    setStats(prev => {
+      const newStats = { ...prev };
+      switch (type) {
+        case 'playlist_generated':
+          newStats.playlistsGenerated += 1;
+          newStats.songsGenerated += (data.trackCount || 0);
+          break;
+        case 'song_generated':
+          newStats.songsGenerated += 1;
+          break;
+        case 'like_given':
+          newStats.likesGiven += 1;
+          break;
+        case 'like_removed':
+          newStats.likesGiven = Math.max(0, newStats.likesGiven - 1);
+          break;
+        case 'wrapped_viewed':
+          newStats.wrappedViews += 1;
+          break;
+      }
+      newStats.totalInteractions += 1;
+      localStorage.setItem('motafy_stats', JSON.stringify(newStats));
+      return newStats;
+    });
+  }, []);
+
+  // Obtener actividad por día (últimos 7 días)
+  const getActivityByDay = useCallback(() => {
+    const last7Days = [];
+    const now = new Date();
+
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+
+      const dayActivity = activityLog.filter(a => {
+        const actDate = new Date(a.timestamp).toISOString().split('T')[0];
+        return actDate === dateStr;
+      });
+
+      last7Days.push({
+        day: date.toLocaleDateString('es', { weekday: 'short' }),
+        date: dateStr,
+        count: dayActivity.length,
+        details: dayActivity
+      });
+    }
+
+    return last7Days;
+  }, [activityLog]);
+
+  // Generar canción individual
+  const generateSingleTrack = useCallback(async () => {
+    const token = getStoredToken();
+    if (!token) throw new Error('No token available');
+
+    try {
+      // Buscar una canción aleatoria basada en preferencias
+      let query = '';
+      if (preferences.genres.length > 0) {
+        query = `genre:${preferences.genres[Math.floor(Math.random() * preferences.genres.length)]}`;
+      } else if (preferences.artists.length > 0) {
+        const artist = preferences.artists[Math.floor(Math.random() * preferences.artists.length)];
+        query = `artist:${artist.name}`;
+      } else {
+        query = 'year:2024';
+      }
+
+      const response = await fetch(
+        `https://api.spotify.com/v1/search?type=track&q=${encodeURIComponent(query)}&limit=50&market=ES`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+
+      if (!response.ok) throw new Error('Error searching tracks');
+
+      const data = await response.json();
+      const tracks = data.tracks?.items || [];
+
+      if (tracks.length === 0) return null;
+
+      // Filtrar por popularidad
+      const { min, max } = preferences.popularity;
+      const filteredTracks = tracks.filter(t => t.popularity >= min && t.popularity <= max);
+      const finalTracks = filteredTracks.length > 0 ? filteredTracks : tracks;
+
+      // Seleccionar una aleatoria
+      const randomTrack = finalTracks[Math.floor(Math.random() * finalTracks.length)];
+
+      // Registrar actividad
+      trackActivity('song_generated', { trackName: randomTrack.name, artistName: randomTrack.artists?.[0]?.name });
+
+      return randomTrack;
+    } catch (error) {
+      console.error('Error generating single track:', error);
+      throw error;
+    }
+  }, [preferences, trackActivity]);
+
+  // Modificar toggleFavorite para trackear
+  const toggleFavoriteWithTracking = useCallback((track) => {
+    const isFav = favorites.some(f => f.id === track.id);
+
+    setFavorites(prev => {
+      let newFavorites;
+      if (isFav) {
+        newFavorites = prev.filter(f => f.id !== track.id);
+        trackActivity('like_removed', { trackName: track.name });
+      } else {
+        newFavorites = [...prev, { ...track, favoritedAt: new Date().toISOString() }];
+        trackActivity('like_given', { trackName: track.name, artistName: track.artists?.[0]?.name });
+      }
+      localStorage.setItem('motafy_favorites', JSON.stringify(newFavorites));
+      return newFavorites;
+    });
+  }, [favorites, trackActivity]);
+
+  // Registrar vista de wrapped
+  const trackWrappedView = useCallback(() => {
+    trackActivity('wrapped_viewed');
+  }, [trackActivity]);
+
   const value = {
     playlist,
     isGenerating,
@@ -353,12 +514,20 @@ export function PlaylistProvider({ children }) {
     addMoreTracks,
     removeTrack,
     refreshPlaylist,
-    toggleFavorite,
+    toggleFavorite: toggleFavoriteWithTracking,
     isFavorite,
     reorderPlaylist,
     loadFromHistory,
     clearPlaylist,
-    exportPlaylist
+    exportPlaylist,
+    // Nuevas funciones
+    activityLog,
+    stats,
+    trackActivity,
+    getActivityByDay,
+    generateSingleTrack,
+    trackWrappedView,
+    playlistHistory: history
   };
 
   return (
