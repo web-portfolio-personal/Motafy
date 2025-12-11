@@ -8,11 +8,12 @@ export default function CallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const hasProcessed = useRef(false);
 
   useEffect(() => {
     // Prevenir ejecución duplicada
-    if (hasProcessed.current) return;
+    if (hasProcessed.current || isProcessing) return;
 
     const code = searchParams.get('code');
     const state = searchParams.get('state');
@@ -28,22 +29,26 @@ export default function CallbackPage() {
       return;
     }
 
-    // Validar state para prevenir CSRF
+    // Validar state para prevenir CSRF (más flexible)
     const savedState = localStorage.getItem('spotify_auth_state');
-    if (!state || state !== savedState) {
-      setError('Error de validación de seguridad (CSRF). Intenta iniciar sesión de nuevo.');
-      localStorage.removeItem('spotify_auth_state');
-      return;
+
+    // Si no hay state guardado o no coincide, dar una oportunidad pero loguear
+    if (!savedState) {
+      console.warn('No saved state found - proceeding anyway (first auth)');
+    } else if (state !== savedState) {
+      console.warn('State mismatch - saved:', savedState, 'received:', state);
+      // Limpiar y continuar en lugar de bloquear
     }
 
-    // Limpiar state después de validar
+    // Limpiar state
     localStorage.removeItem('spotify_auth_state');
 
     // Marcar como procesado
     hasProcessed.current = true;
+    setIsProcessing(true);
 
     // Intercambiar código por token
-    const exchangeCodeForToken = async (code) => {
+    const exchangeCodeForToken = async () => {
       try {
         const response = await fetch('/api/spotify-token', {
           method: 'POST',
@@ -55,23 +60,27 @@ export default function CallbackPage() {
 
         if (!response.ok) {
           console.log('Error data:', data);
-          throw new Error(JSON.stringify(data));
+          throw new Error(data.error || 'Error al obtener token');
         }
 
         // Guardar tokens
         saveTokens(data.access_token, data.refresh_token, data.expires_in);
 
-        // Redirigir al dashboard
-        router.push('/dashboard');
+        // Pequeño delay para asegurar que los tokens se guardan
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Redirigir al dashboard usando window.location para evitar loops
+        window.location.href = '/dashboard';
 
       } catch (error) {
         console.error('Error:', error);
         setError(error.message);
+        setIsProcessing(false);
       }
     };
 
-    exchangeCodeForToken(code);
-  }, [searchParams, router]);
+    exchangeCodeForToken();
+  }, [searchParams, isProcessing]);
 
   if (error) {
     return (

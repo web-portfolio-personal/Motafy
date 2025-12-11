@@ -92,24 +92,24 @@ export default function DashboardPage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-zinc-900 via-black to-zinc-900 flex items-center justify-center">
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
         <LoadingSpinner size="xl" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-900 via-black to-zinc-900 flex flex-col">
+    <div className="min-h-screen bg-[var(--background)] flex flex-col">
       <Header />
 
       <main className="flex-1 max-w-[1800px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
         {/* Welcome Message */}
         {user && (
           <div className="mb-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white">
+            <h1 className="text-2xl sm:text-3xl font-bold text-[var(--foreground)]">
               ¡Hola, {user.display_name?.split(' ')[0]}! 👋
             </h1>
-            <p className="text-white/60">
+            <p className="text-[var(--foreground-secondary)]">
               Configura los widgets y genera tu playlist personalizada
             </p>
           </div>
@@ -120,7 +120,7 @@ export default function DashboardPage() {
           <div className="mb-6 p-4 bg-spotify-green/10 border border-spotify-green/20 rounded-xl flex items-start gap-3">
             <FiInfo className="h-5 w-5 text-spotify-green flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-sm text-white">
+              <p className="text-sm text-[var(--foreground)]">
                 <strong>Consejo:</strong> Selecciona al menos algunos artistas, géneros o canciones
                 en los widgets de la izquierda, ajusta el mood y la popularidad, y luego haz clic
                 en &ldquo;Generar Playlist&rdquo; para crear tu mezcla perfecta.
@@ -128,7 +128,7 @@ export default function DashboardPage() {
             </div>
             <button
               onClick={() => setShowTips(false)}
-              className="text-white/50 hover:text-white text-sm"
+              className="text-[var(--foreground-secondary)] hover:text-[var(--foreground)] text-sm"
             >
               Cerrar
             </button>
@@ -139,7 +139,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Left Column - Widgets */}
           <div className="xl:col-span-2 space-y-6">
-            {/* Widgets Grid */}
+            {/* Widgets Grid - Primera fila */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <ArtistWidget
                 selectedArtists={preferences.artists}
@@ -151,6 +151,10 @@ export default function DashboardPage() {
                 onSelect={handleTracksChange}
                 maxItems={5}
               />
+            </div>
+
+            {/* Widgets Grid - Segunda fila */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <GenreWidget
                 selectedGenres={preferences.genres}
                 onSelect={handleGenresChange}
@@ -160,6 +164,10 @@ export default function DashboardPage() {
                 selectedDecades={preferences.decades}
                 onSelect={handleDecadesChange}
               />
+            </div>
+
+            {/* Widgets Grid - Tercera fila (Mood y Popularity - más altos) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <MoodWidget
                 mood={preferences.mood}
                 onSelect={handleMoodChange}
@@ -174,10 +182,10 @@ export default function DashboardPage() {
             <div className="bg-gradient-to-r from-spotify-green/20 via-green-600/20 to-spotify-green/20 rounded-2xl p-6 border border-spotify-green/30">
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-bold text-white mb-1">
+                  <h2 className="text-xl font-bold text-[var(--foreground)] mb-1">
                     ¿Listo para crear tu playlist?
                   </h2>
-                  <p className="text-white/60 text-sm">
+                  <p className="text-[var(--foreground-secondary)] text-sm">
                     {hasSelections
                       ? `${preferences.artists.length} artistas, ${preferences.genres.length} géneros, ${preferences.decades.length} décadas seleccionados`
                       : 'Selecciona algunas preferencias para empezar'

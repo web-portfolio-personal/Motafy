@@ -13,13 +13,18 @@ export function getSpotifyAuthUrl() {
   const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || '';
   const redirectUri = process.env.NEXT_PUBLIC_REDIRECT_URI || '';
 
-  // Debug - mostrar en consola para verificar valores
-  console.log('Auth Debug:', { clientId: clientId ? clientId.substring(0, 8) + '...' : 'EMPTY', redirectUri });
   const state = generateRandomString(16);
 
-  // Guardar el state para validación posterior (prevenir CSRF)
+  // Guardar el state ANTES de construir la URL (prevenir CSRF)
   if (typeof window !== 'undefined') {
-    localStorage.setItem('spotify_auth_state', state);
+    try {
+      localStorage.setItem('spotify_auth_state', state);
+      // Verificar que se guardó correctamente
+      const saved = localStorage.getItem('spotify_auth_state');
+      console.log('State saved:', saved === state);
+    } catch (e) {
+      console.error('Error saving state:', e);
+    }
   }
 
   // Scopes extendidos para funcionalidad completa
