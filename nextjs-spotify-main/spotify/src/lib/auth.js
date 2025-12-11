@@ -12,6 +12,9 @@ export function generateRandomString(length) {
 export function getSpotifyAuthUrl() {
   const clientId = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID || '';
   const redirectUri = process.env.NEXT_PUBLIC_REDIRECT_URI || '';
+
+  // Debug - mostrar en consola para verificar valores
+  console.log('Auth Debug:', { clientId: clientId ? clientId.substring(0, 8) + '...' : 'EMPTY', redirectUri });
   const state = generateRandomString(16);
 
   // Guardar el state para validación posterior (prevenir CSRF)
