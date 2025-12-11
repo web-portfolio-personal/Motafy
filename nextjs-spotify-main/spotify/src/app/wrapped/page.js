@@ -425,24 +425,24 @@ export default function WrappedPage() {
         </div>
       </main>
 
-      {/* Controles de navegación */}
-      <div className="absolute inset-y-0 left-0 right-0 flex pointer-events-none">
+      {/* Controles de navegación - Áreas táctiles invisibles */}
+      <div className="absolute inset-0 flex z-30" style={{ top: '60px' }}>
         <button
           onClick={prevSlide}
           disabled={currentSlide === 0}
-          className="flex-1 cursor-pointer pointer-events-auto opacity-0 hover:opacity-100 transition-opacity disabled:cursor-default"
+          className="flex-1 cursor-pointer disabled:cursor-default focus:outline-none"
           aria-label="Anterior"
         />
         <button
           onClick={nextSlide}
           disabled={currentSlide === SLIDES.length - 1}
-          className="flex-1 cursor-pointer pointer-events-auto opacity-0 hover:opacity-100 transition-opacity disabled:cursor-default"
+          className="flex-1 cursor-pointer disabled:cursor-default focus:outline-none"
           aria-label="Siguiente"
         />
       </div>
 
       {/* Indicador de toque */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/40 text-sm flex items-center gap-2">
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/60 text-sm flex items-center gap-2 z-40">
         {currentSlide < SLIDES.length - 1 && (
           <>
             <span>Toca para continuar</span>
