@@ -283,10 +283,16 @@ const handleGenerate = async () => {
 
       <Footer />
 
-      {/* Modal de canción individual */}
+{/* Modal de canción individual */}
       {showSingleTrackModal && singleTrack && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-          <div className="relative w-full max-w-md bg-gradient-to-br from-purple-900/90 to-pink-900/90 rounded-3xl p-6 border border-white/10 shadow-2xl animate-scale-in overflow-hidden">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in"
+          onClick={() => setShowSingleTrackModal(false)}
+        >
+          <div
+            className="relative w-full max-w-md bg-gradient-to-br from-purple-900/90 to-pink-900/90 rounded-3xl p-6 border border-white/10 shadow-2xl animate-scale-in overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Fondo con imagen blur */}
             {singleTrack.album?.images?.[0]?.url && (
               <div className="absolute inset-0 -z-10">
@@ -298,12 +304,12 @@ const handleGenerate = async () => {
               </div>
             )}
 
-            {/* Botón cerrar */}
+            {/* Botón cerrar - Z-INDEX ALTO */}
             <button
               onClick={() => setShowSingleTrackModal(false)}
-              className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full transition-colors z-10"
+              className="absolute top-4 right-4 z-50 p-3 bg-black/40 hover:bg-black/60 rounded-full transition-colors"
             >
-              <FiX className="h-5 w-5 text-white/70" />
+              <FiX className="h-6 w-6 text-white" />
             </button>
 
             <div className="text-center relative z-10">

@@ -34,16 +34,17 @@ export default function TrackInfoPopup({
     return track.album?.release_date?.split('-')[0] || 'N/A';
   };
 
-  const positionClasses = {
+const positionClasses = {
     right: 'left-full ml-2 top-0',
     left: 'right-full mr-2 top-0',
     bottom: 'top-full mt-2 left-1/2 -translate-x-1/2',
-    top: 'bottom-full mb-2 left-1/2 -translate-x-1/2'
+    top: 'bottom-full mb-2 left-1/2 -translate-x-1/2',
+    none: '' // Posicionamiento externo
   };
 
-return (
+  return (
     <div
-      className={`absolute ${positionClasses[position]} z-50 w-72 bg-zinc-900/95 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-scale-in`}
+      className={`${position === 'none' ? '' : 'absolute'} ${positionClasses[position]} z-50 w-72 bg-zinc-900/95 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-scale-in`}
       onClick={(e) => e.stopPropagation()}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
