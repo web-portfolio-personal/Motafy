@@ -54,7 +54,8 @@ export default function CallbackPage() {
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || 'Error al obtener token');
+          console.log('Error data:', data);
+          throw new Error(JSON.stringify(data));
         }
 
         // Guardar tokens

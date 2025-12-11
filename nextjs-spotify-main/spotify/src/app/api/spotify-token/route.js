@@ -15,6 +15,29 @@ export async function POST(request) {
     const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
     const redirectUri = process.env.NEXT_PUBLIC_REDIRECT_URI;
 
+    // DEBUG: Log para ver qué valores tiene el servidor
+    console.log('DEBUG Token Exchange:', {
+      hasClientId: !!clientId,
+      clientIdPreview: clientId ? clientId.substring(0, 8) + '...' : 'MISSING',
+      hasClientSecret: !!clientSecret,
+      redirectUri: redirectUri || 'MISSING'
+    });
+
+    // Verificar que las variables existen
+    if (!clientId || !clientSecret || !redirectUri) {
+      return NextResponse.json(
+        {
+          error: 'Configuración incompleta del servidor',
+          debug: {
+            hasClientId: !!clientId,
+            hasClientSecret: !!clientSecret,
+            hasRedirectUri: !!redirectUri
+          }
+        },
+        { status: 500 }
+      );
+    }
+
     // Intercambiar código por tokens
     const response = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
@@ -34,8 +57,13 @@ export async function POST(request) {
     const data = await response.json();
 
     if (!response.ok) {
+      console.log('Spotify API Error:', data);
       return NextResponse.json(
-        { error: data.error_description || 'Error al obtener token' },
+        {
+          error: data.error_description || data.error || 'Error al obtener token',
+          spotifyError: data.error,
+          redirectUsed: redirectUri
+        },
         { status: response.status }
       );
     }
