@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FiPlay, FiInfo } from 'react-icons/fi';
+import { FiPlay, FiInfo, FiShuffle, FiHeart, FiPlus, FiX, FiMusic } from 'react-icons/fi';
 import { useAuth } from '@/context/AuthContext';
 import { usePlaylist } from '@/context/PlaylistContext';
 import { useToast } from '@/context/ToastContext';
@@ -30,11 +30,18 @@ export default function DashboardPage() {
     generatePlaylist,
     isGenerating,
     playlist,
-    trackActivity
+    trackActivity,
+    generateSingleTrack,
+    toggleFavorite,
+    isFavorite,
+    addTrackToPlaylist
   } = usePlaylist();
   const toast = useToast();
 
   const [showTips, setShowTips] = useState(true);
+  const [singleTrack, setSingleTrack] = useState(null);
+  const [isGeneratingSingle, setIsGeneratingSingle] = useState(false);
+  const [showSingleTrackModal, setShowSingleTrackModal] = useState(false);
 
   // Protección de ruta
   useEffect(() => {
@@ -43,7 +50,7 @@ export default function DashboardPage() {
     }
   }, [authLoading, isAuthenticated, router]);
 
-  const handleGenerate = async () => {
+const handleGenerate = async () => {
     try {
       const result = await generatePlaylist();
       setShowTips(false);
@@ -57,6 +64,39 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('Error generating playlist:', error);
       toast.error('Error al generar la playlist');
+    }
+  };
+
+  // Generar canción individual
+  const handleGenerateSingle = async () => {
+    setIsGeneratingSingle(true);
+    try {
+      const track = await generateSingleTrack();
+      if (track) {
+        setSingleTrack(track);
+        setShowSingleTrackModal(true);
+        toast.success('¡Canción generada!');
+      } else {
+        toast.error('No se encontró ninguna canción');
+      }
+    } catch (error) {
+      console.error('Error generating single track:', error);
+      toast.error('Error al generar canción');
+    } finally {
+      setIsGeneratingSingle(false);
+    }
+  };
+
+  // Añadir canción generada a la playlist
+  const addSingleTrackToPlaylist = () => {
+    if (singleTrack) {
+      const added = addTrackToPlaylist(singleTrack);
+      if (added) {
+        toast.success('¡Canción añadida a la playlist!');
+        setShowSingleTrackModal(false);
+      } else {
+        toast.error('La canción ya está en la playlist');
+      }
     }
   };
 
@@ -180,30 +220,56 @@ export default function DashboardPage() {
               />
             </div>
 
-            {/* Generate Button */}
+            {/* Generate Buttons */}
             <div className="bg-gradient-to-r from-spotify-green/20 via-green-600/20 to-spotify-green/20 rounded-2xl p-6 border border-spotify-green/30">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-bold text-[var(--foreground)] mb-1">
-                    ¿Listo para crear tu playlist?
-                  </h2>
-                  <p className="text-[var(--foreground-secondary)] text-sm">
-                    {hasSelections
-                      ? `${preferences.artists.length} artistas, ${preferences.genres.length} géneros, ${preferences.decades.length} décadas seleccionados`
-                      : 'Selecciona algunas preferencias para empezar'
-                    }
-                  </p>
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-xl font-bold text-[var(--foreground)] mb-1">
+                      ¿Listo para crear tu playlist?
+                    </h2>
+                    <p className="text-[var(--foreground-secondary)] text-sm">
+                      {hasSelections
+                        ? `${preferences.artists.length} artistas, ${preferences.genres.length} géneros, ${preferences.decades.length} décadas seleccionados`
+                        : 'Selecciona algunas preferencias para empezar'
+                      }
+                    </p>
+                  </div>
+                  <div className="flex gap-3 w-full sm:w-auto">
+                    <Button
+                      size="lg"
+                      onClick={handleGenerate}
+                      loading={isGenerating}
+                      disabled={!hasSelections}
+                      icon={<FiPlay className="h-5 w-5" />}
+                      className="flex-1 sm:flex-none"
+                    >
+                      Generar Playlist
+                    </Button>
+                  </div>
                 </div>
-                <Button
-                  size="lg"
-                  onClick={handleGenerate}
-                  loading={isGenerating}
-                  disabled={!hasSelections}
-                  icon={<FiPlay className="h-5 w-5" />}
-                  className="w-full sm:w-auto"
-                >
-                  Generar Playlist
-                </Button>
+
+                {/* Botón generar canción individual */}
+                <div className="pt-4 border-t border-spotify-green/20">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div>
+                      <h3 className="font-semibold text-[var(--foreground)]">¿Solo quieres una canción?</h3>
+                      <p className="text-[var(--foreground-secondary)] text-sm">Genera una canción aleatoria basada en tus preferencias</p>
+                    </div>
+                    <button
+                      onClick={handleGenerateSingle}
+                      disabled={isGeneratingSingle}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-300 rounded-xl font-medium transition-all disabled:opacity-50"
+                    >
+                      {isGeneratingSingle ? (
+                        <LoadingSpinner size="sm" />
+                      ) : (
+                        <FiShuffle className="h-4 w-4" />
+                      )}
+                      Generar Canción
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -216,6 +282,107 @@ export default function DashboardPage() {
       </main>
 
       <Footer />
+
+      {/* Modal de canción individual */}
+      {showSingleTrackModal && singleTrack && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-md bg-gradient-to-br from-purple-900/90 to-pink-900/90 rounded-3xl p-6 border border-white/10 shadow-2xl animate-scale-in">
+            {/* Botón cerrar */}
+            <button
+              onClick={() => setShowSingleTrackModal(false)}
+              className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full transition-colors"
+            >
+              <FiX className="h-5 w-5 text-white/70" />
+            </button>
+
+            <div className="text-center">
+              <p className="text-white/60 text-sm uppercase tracking-wider mb-4">Tu canción aleatoria</p>
+
+              {/* Imagen del álbum */}
+              <div className="relative w-48 h-48 mx-auto mb-6 rounded-2xl overflow-hidden shadow-2xl">
+                {singleTrack.album?.images?.[0]?.url ? (
+                  <img
+                    src={singleTrack.album.images[0].url}
+                    alt={singleTrack.album.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-white/10 flex items-center justify-center">
+                    <FiMusic className="h-16 w-16 text-white/30" />
+                  </div>
+                )}
+                {/* Preview play button */}
+                {singleTrack.preview_url && (
+                  <a
+                    href={singleTrack.preview_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity"
+                  >
+                    <div className="w-14 h-14 bg-spotify-green rounded-full flex items-center justify-center">
+                      <FiPlay className="h-6 w-6 text-black ml-1" />
+                    </div>
+                  </a>
+                )}
+              </div>
+
+              {/* Info de la canción */}
+              <h2 className="text-xl font-bold text-white mb-1 truncate px-4">{singleTrack.name}</h2>
+              <p className="text-white/70 mb-2">{singleTrack.artists?.map(a => a.name).join(', ')}</p>
+              <p className="text-white/50 text-sm mb-6">{singleTrack.album?.name}</p>
+
+{/* Botones de acción */}
+              <div className="flex flex-wrap gap-3 justify-center">
+                <button
+                  onClick={() => {
+                    toggleFavorite(singleTrack);
+                    toast.success(isFavorite(singleTrack.id) ? 'Eliminado de favoritos' : '¡Añadido a favoritos!');
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full font-medium transition-all ${
+                    isFavorite(singleTrack.id)
+                      ? 'bg-pink-500 text-white'
+                      : 'bg-white/10 text-white hover:bg-white/20'
+                  }`}
+                >
+                  <FiHeart className={`h-4 w-4 ${isFavorite(singleTrack.id) ? 'fill-current' : ''}`} />
+                  {isFavorite(singleTrack.id) ? 'Favorito' : 'Me gusta'}
+                </button>
+
+                {playlist.length > 0 && (
+                  <button
+                    onClick={addSingleTrackToPlaylist}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 rounded-full font-medium transition-all"
+                  >
+                    <FiPlus className="h-4 w-4" />
+                    Añadir a playlist
+                  </button>
+                )}
+
+                <button
+                  onClick={handleGenerateSingle}
+                  disabled={isGeneratingSingle}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-spotify-green text-black rounded-full font-medium hover:bg-spotify-green-light transition-all disabled:opacity-50"
+                >
+                  <FiShuffle className="h-4 w-4" />
+                  Otra más
+                </button>
+              </div>
+
+              {/* Link a Spotify */}
+              {singleTrack.external_urls?.spotify && (
+                <a
+                  href={singleTrack.external_urls.spotify}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block mt-6 text-sm text-white/50 hover:text-spotify-green transition-colors"
+                >
+                  Abrir en Spotify →
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

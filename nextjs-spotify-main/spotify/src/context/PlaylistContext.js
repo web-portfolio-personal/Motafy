@@ -503,6 +503,19 @@ export function PlaylistProvider({ children }) {
     trackActivity('wrapped_viewed');
   }, [trackActivity]);
 
+  // Añadir una canción a la playlist actual
+  const addTrackToPlaylist = useCallback((track) => {
+    if (!track) return false;
+
+    // Verificar que no está ya en la playlist
+    const exists = playlist.some(t => t.id === track.id);
+    if (exists) return false;
+
+    setPlaylist(prev => [...prev, track]);
+    trackActivity('song_added_to_playlist', { trackName: track.name });
+    return true;
+  }, [playlist, trackActivity]);
+
   const value = {
     playlist,
     isGenerating,
@@ -527,6 +540,7 @@ export function PlaylistProvider({ children }) {
     getActivityByDay,
     generateSingleTrack,
     trackWrappedView,
+    addTrackToPlaylist,
     playlistHistory: history
   };
 
