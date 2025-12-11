@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { FiPlay, FiSettings, FiInfo, FiDatabase } from 'react-icons/fi';
+import { FiPlay, FiInfo } from 'react-icons/fi';
 import { useAuth } from '@/context/AuthContext';
 import { usePlaylist } from '@/context/PlaylistContext';
 import { useToast } from '@/context/ToastContext';
@@ -11,8 +11,6 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import Button from '@/components/ui/Button';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import StorageManager from '@/components/ui/StorageManager';
-import ApiStatsPanel from '@/components/ui/ApiStatsPanel';
 
 import ArtistWidget from '@/components/widgets/ArtistWidget';
 import TrackWidget from '@/components/widgets/TrackWidget';
@@ -22,8 +20,6 @@ import MoodWidget from '@/components/widgets/MoodWidget';
 import PopularityWidget from '@/components/widgets/PopularityWidget';
 
 import PlaylistDisplay from '@/components/playlist/PlaylistDisplay';
-import HistoryPanel from '@/components/playlist/HistoryPanel';
-import StatsPanel from '@/components/playlist/StatsPanel';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -38,7 +34,6 @@ export default function DashboardPage() {
   const toast = useToast();
 
   const [showTips, setShowTips] = useState(true);
-  const [showStorageManager, setShowStorageManager] = useState(false);
 
   // Protección de ruta
   useEffect(() => {
@@ -204,46 +199,16 @@ export default function DashboardPage() {
                 </Button>
               </div>
             </div>
-
-            {/* Stats and History - Mobile */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 xl:hidden">
-              <StatsPanel />
-              <HistoryPanel />
-            </div>
           </div>
 
-          {/* Right Column - Playlist + Stats */}
+          {/* Right Column - Playlist */}
           <div className="space-y-6">
             <PlaylistDisplay />
-
-            {/* Stats and History - Desktop */}
-            <div className="hidden xl:block space-y-6">
-              <StatsPanel />
-              <HistoryPanel />
-
-              {/* API Stats Panel */}
-              <ApiStatsPanel />
-
-              {/* Storage Button */}
-              <button
-                onClick={() => setShowStorageManager(true)}
-                className="w-full flex items-center justify-center gap-2 p-3 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-colors text-sm text-white/60 hover:text-white"
-              >
-                <FiDatabase className="h-4 w-4" />
-                Gestionar Almacenamiento
-              </button>
-            </div>
           </div>
         </div>
       </main>
 
       <Footer />
-
-      {/* Storage Manager Modal */}
-      <StorageManager
-        isOpen={showStorageManager}
-        onClose={() => setShowStorageManager(false)}
-      />
     </div>
   );
 }
