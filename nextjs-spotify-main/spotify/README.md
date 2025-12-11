@@ -1,296 +1,345 @@
-# 🎵 Motafy - Generador de Playlists Personalizado
+<div align="center">
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Next.js-16.0.1-black?style=for-the-badge&logo=next.js" alt="Next.js" />
-  <img src="https://img.shields.io/badge/React-19.2.0-61DAFB?style=for-the-badge&logo=react" alt="React" />
-  <img src="https://img.shields.io/badge/Tailwind_CSS-4.0-38B2AC?style=for-the-badge&logo=tailwind-css" alt="Tailwind CSS" />
-  <img src="https://img.shields.io/badge/Spotify_API-Web_API-1DB954?style=for-the-badge&logo=spotify" alt="Spotify" />
+# 🎵 Motafy
+
+### Generador de Playlists Personalizadas con Spotify
+
+<p>
+  <img src="https://img.shields.io/badge/Next.js-16.0-black?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js" />
+  <img src="https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-4.0-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/Spotify_API-1DB954?style=for-the-badge&logo=spotify&logoColor=white" alt="Spotify" />
 </p>
 
-Aplicación web que genera playlists personalizadas de Spotify basándose en las preferencias musicales del usuario mediante widgets configurables.
+**Motafy** es una aplicación web que permite crear playlists personalizadas de Spotify mediante un sistema intuitivo de widgets configurables. Genera listas de reproducción únicas basadas en artistas, géneros, décadas, estado de ánimo y popularidad.
 
-## 📋 Tabla de Contenidos
+[🌐 Ver Demo en Vivo](https://motafy.vercel.app)
 
-- [Características](#-características)
-- [Demo](#-demo)
-- [Requisitos Previos](#-requisitos-previos)
-- [Instalación](#-instalación)
-- [Configuración de Spotify](#-configuración-de-spotify)
-- [Uso](#-uso)
-- [Estructura del Proyecto](#-estructura-del-proyecto)
-- [Tecnologías](#-tecnologías)
-- [Funcionalidades](#-funcionalidades)
-- [Autor](#-autor)
+</div>
 
 ---
 
-## ✨ Características
+## 📋 Índice
 
-### Funcionalidades Obligatorias ✅
-- ✅ Autenticación OAuth 2.0 con Spotify
-- ✅ Token refresh automático
-- ✅ 6 widgets funcionales (Artistas, Canciones, Géneros, Décadas, Mood, Popularidad)
-- ✅ Generación de playlist basada en preferencias
-- ✅ Eliminar tracks de playlist
-- ✅ Marcar tracks como favoritos (localStorage)
-- ✅ Refrescar playlist
-- ✅ Añadir más canciones
-- ✅ Diseño responsive
-
-### Funcionalidades Opcionales 🎯
-- ✅ Guardar playlist en Spotify
-- ✅ Drag & drop para reordenar
-- ✅ Guardar preferencias de widgets
-- ✅ Historial de playlists
-- ✅ Preview de canciones (30s)
-- ✅ Exportar playlist como JSON
-- ✅ Compartir playlist
-- ✅ Sistema de notificaciones toast
-- ✅ Tema claro/oscuro
-- ✅ Estadísticas de playlist
+1. [Funcionalidades Obligatorias](#-funcionalidades-obligatorias)
+2. [Funcionalidades Opcionales Implementadas](#-funcionalidades-opcionales-implementadas)
+3. [Funcionalidades Extra Añadidas](#-funcionalidades-extra-añadidas)
+4. [Arquitectura del Proyecto](#-arquitectura-del-proyecto)
+5. [Gestión de Estado](#-gestión-de-estado)
+6. [Autor](#-autor)
 
 ---
 
-## 🎬 Demo
+## ✅ Funcionalidades Obligatorias
 
-1. Inicia sesión con tu cuenta de Spotify
-2. Configura tus preferencias en los 6 widgets:
-   - 🎤 **Artistas**: Busca y selecciona hasta 5 artistas
-   - 🎵 **Canciones**: Añade canciones específicas
-   - 🎸 **Géneros**: Elige entre 100+ géneros disponibles
-   - 📅 **Décadas**: Selecciona tus épocas favoritas
-   - 😊 **Mood**: Ajusta energía, positividad, bailabilidad
-   - 📊 **Popularidad**: Hits mainstream o joyas ocultas
-3. Genera tu playlist personalizada
-4. Escucha previews de 30 segundos
-5. Guarda en Spotify o exporta como JSON
+Todas las funcionalidades obligatorias del enunciado están implementadas:
 
----
+### 🔐 Autenticación OAuth 2.0
 
-## 📦 Requisitos Previos
+| Archivo | Descripción |
+|---------|-------------|
+| `src/context/AuthContext.js` | Gestiona todo el estado de autenticación |
+| `src/lib/auth.js` | Funciones de generación de URLs y validación CSRF |
+| `src/app/api/spotify-token/route.js` | Exchange del código por tokens (server-side) |
+| `src/app/api/refresh-token/route.js` | Renovación automática de tokens |
+| `src/app/auth/callback/page.js` | Manejo del callback de Spotify |
 
-- Node.js 18+ 
-- npm o yarn
-- Cuenta de Spotify (gratuita o premium)
-- Aplicación registrada en [Spotify for Developers](https://developer.spotify.com/dashboard)
+**Características:**
+- ✅ Validación CSRF con parámetro `state`
+- ✅ Token refresh automático antes de expirar
+- ✅ Client Secret protegido en el servidor
+- ✅ Logout seguro limpiando localStorage
 
----
+### 🎛️ 6 Widgets de Preferencias
 
-## 🚀 Instalación
+| Widget | Archivo | Funcionalidad |
+|--------|---------|---------------|
+| 🎤 **Artistas** | `src/components/widgets/ArtistWidget.jsx` | Búsqueda y selección de hasta 5 artistas con preview de imagen |
+| 🎵 **Canciones** | `src/components/widgets/TrackWidget.jsx` | Búsqueda de canciones como semillas para recomendaciones |
+| 🎸 **Géneros** | `src/components/widgets/GenreWidget.jsx` | 100+ géneros con filtrado instantáneo y chips seleccionables |
+| 📅 **Décadas** | `src/components/widgets/DecadeWidget.jsx` | Selector visual de épocas (50s - 2020s) |
+| 😊 **Mood** | `src/components/widgets/MoodWidget.jsx` | Sliders para energía, positividad, bailabilidad, acústico |
+| 📊 **Popularidad** | `src/components/widgets/PopularityWidget.jsx` | Presets rápidos o rango personalizado |
 
-1. **Clona el repositorio**
-```bash
-git clone <url-del-repositorio>
-cd spotify
-```
+**Características técnicas:**
+- Búsqueda con **debounce** de 300ms (`src/hooks/useDebounce.js`)
+- Estado centralizado en `src/context/PlaylistContext.js`
+- Límites de selección configurables por widget
 
-2. **Instala las dependencias**
-```bash
-npm install
-```
+### 📀 Generación y Gestión de Playlist
 
-3. **Configura las variables de entorno**
-```bash
-cp .env.local.example .env.local
-```
+| Funcionalidad | Archivo | Descripción |
+|---------------|---------|-------------|
+| Generar playlist | `PlaylistContext.js` → `generatePlaylist()` | Combina preferencias y llama a `/recommendations` |
+| Eliminar tracks | `PlaylistContext.js` → `removeTrack()` | Elimina canciones individuales |
+| Refrescar | `PlaylistContext.js` → `refreshPlaylist()` | Genera nuevas recomendaciones |
+| Añadir más | `PlaylistContext.js` → `addMoreTracks()` | Añade canciones manteniendo las actuales |
+| Reordenar | `PlaylistDisplay.jsx` con `@dnd-kit` | Drag & Drop accesible |
 
-4. **Edita `.env.local`** con tus credenciales de Spotify:
-```env
-SPOTIFY_CLIENT_ID=tu_client_id_aqui
-SPOTIFY_CLIENT_SECRET=tu_client_secret_aqui
-NEXT_PUBLIC_SPOTIFY_CLIENT_ID=tu_client_id_aqui
-NEXT_PUBLIC_REDIRECT_URI=http://127.0.0.1:3000/auth/callback
-```
+### 💾 Guardar Playlist en Spotify
 
-5. **Ejecuta el servidor de desarrollo**
-```bash
-npm run dev
-```
-
-6. Abre [http://127.0.0.1:3000](http://127.0.0.1:3000) en tu navegador
+| Archivo | Funcionalidad |
+|---------|---------------|
+| `src/app/api/save-playlist/route.js` | API Route que crea la playlist y añade tracks |
+| `src/components/playlist/SavePlaylistModal.jsx` | Modal para nombrar y guardar |
 
 ---
 
-## 🎵 Configuración de Spotify
+## 🎯 Funcionalidades Opcionales Implementadas
 
-1. Ve a [Spotify for Developers Dashboard](https://developer.spotify.com/dashboard)
-2. Inicia sesión con tu cuenta de Spotify
-3. Haz clic en **"Create app"**
-4. Completa el formulario:
-   - **App name**: Motafy
-   - **App description**: Generador de playlists personalizadas
-   - **Redirect URI**: `http://127.0.0.1:3000/auth/callback`
-   - **API/SDKs**: Web API
-5. Guarda tu **Client ID** y **Client Secret**
-6. Añádelos a tu archivo `.env.local`
+### ❤️ Sistema de Favoritos
 
-> ⚠️ **Importante**: La Redirect URI debe coincidir EXACTAMENTE con la configurada en `.env.local`
+**Archivos involucrados:**
+- `src/context/PlaylistContext.js` → `toggleFavorite()`, `isFavorite()`, `favorites`
+- `src/app/favorites/page.js` → Página dedicada
+- `src/components/playlist/FavoriteTrackCard.jsx` → Tarjeta con funcionalidades
 
----
-
-## 💻 Uso
-
-### Desarrollo
-```bash
-npm run dev
-```
-
-### Producción
-```bash
-npm run build
-npm start
-```
-
-### Linting
-```bash
-npm run lint
-```
-
----
-
-## 📁 Estructura del Proyecto
-
-```
-spotify/
-├── src/
-│   ├── app/                      # App Router de Next.js
-│   │   ├── page.js               # Página de inicio/login
-│   │   ├── layout.js             # Layout principal
-│   │   ├── globals.css           # Estilos globales
-│   │   ├── error.js              # Página de error
-│   │   ├── not-found.js          # Página 404
-│   │   ├── about/                # Página Acerca de
-│   │   ├── dashboard/            # Dashboard principal
-│   │   ├── auth/callback/        # Callback OAuth
-│   │   └── api/                  # API Routes
-│   │       ├── spotify-token/    # Intercambio de tokens
-│   │       ├── refresh-token/    # Refresh token
-│   │       └── save-playlist/    # Guardar playlist
-│   │
-│   ├── components/               # Componentes React
-│   │   ├── layout/               # Header, Footer
-│   │   ├── playlist/             # Componentes de playlist
-│   │   │   ├── PlaylistDisplay.jsx
-│   │   │   ├── TrackCard.jsx
-│   │   │   ├── SavePlaylistModal.jsx
-│   │   │   ├── HistoryPanel.jsx
-│   │   │   └── StatsPanel.jsx
-│   │   ├── ui/                   # Componentes UI reutilizables
-│   │   │   ├── Button.jsx
-│   │   │   ├── Modal.jsx
-│   │   │   ├── Chip.jsx
-│   │   │   ├── Slider.jsx
-│   │   │   ├── SearchInput.jsx
-│   │   │   ├── LoadingSpinner.jsx
-│   │   │   ├── Skeleton.jsx
-│   │   │   ├── Tooltip.jsx
-│   │   │   └── AudioPlayer.jsx
-│   │   ├── widgets/              # Widgets de preferencias
-│   │   │   ├── ArtistWidget.jsx
-│   │   │   ├── TrackWidget.jsx
-│   │   │   ├── GenreWidget.jsx
-│   │   │   ├── DecadeWidget.jsx
-│   │   │   ├── MoodWidget.jsx
-│   │   │   └── PopularityWidget.jsx
-│   │   └── Providers.jsx         # Context providers
-│   │
-│   ├── context/                  # React Context
-│   │   ├── AuthContext.js        # Autenticación
-│   │   ├── PlaylistContext.js    # Estado de playlist
-│   │   ├── ThemeContext.js       # Tema claro/oscuro
-│   │   └── ToastContext.js       # Notificaciones
-│   │
-│   ├── hooks/                    # Custom Hooks
-│   │   ├── useSpotifyApi.js      # API de Spotify
-│   │   ├── useDebounce.js        # Debounce para búsquedas
-│   │   ├── useLocalStorage.js    # Persistencia local
-│   │   └── useAudioPlayer.js     # Reproductor de audio
-│   │
-│   └── lib/                      # Utilidades
-│       ├── auth.js               # Funciones de autenticación
-│       ├── spotify.js            # Funciones API Spotify
-│       ├── constants.js          # Constantes de la app
-│       └── utils.js              # Utilidades generales
-│
-├── public/                       # Archivos estáticos
-├── .env.local                    # Variables de entorno (no incluido)
-├── .env.local.example            # Ejemplo de variables
-├── package.json
-└── README.md
-```
-
----
-
-## 🛠 Tecnologías
-
-| Tecnología | Versión | Descripción |
-|------------|---------|-------------|
-| Next.js | 16.0.1 | Framework React para producción |
-| React | 19.2.0 | Biblioteca de UI |
-| Tailwind CSS | 4.0 | Framework CSS utility-first |
-| @dnd-kit | 6.3.1 | Drag & drop accesible |
-| react-icons | 5.5.0 | Iconos para React |
-| Spotify Web API | - | API para acceder a Spotify |
-
----
-
-## 🎯 Funcionalidades Detalladas
-
-### 🔐 Autenticación
-- OAuth 2.0 con Spotify
-- Validación CSRF con parámetro state
-- Token refresh automático antes de expirar
-- Logout seguro
-
-### 🎨 Widgets
-- **ArtistWidget**: Búsqueda con debounce, selección múltiple, preview de imagen
-- **TrackWidget**: Búsqueda de canciones, preview de audio, duración
-- **GenreWidget**: 100+ géneros, filtrado por búsqueda
-- **DecadeWidget**: Selector visual con emojis
-- **MoodWidget**: Sliders para energía, positividad, bailabilidad, acústico
-- **PopularityWidget**: Presets y rango personalizado
-
-### 📀 Playlist
-- Generación inteligente combinando preferencias
-- Drag & drop para reordenar
-- Eliminar canciones individuales
-- Preview de 30 segundos
-- Guardar en Spotify
-- Exportar como JSON
-- Historial de playlists anteriores
-
-### ❤️ Favoritos
-- Marcar/desmarcar canciones
+**Características:**
 - Persistencia en localStorage
-- Vista dedicada de favoritos
+- Vista Grid/Lista intercambiable
+- Búsqueda y filtrado de favoritos
+- Ordenación por: recientes, nombre, artista, año
+- Estadísticas de favoritos (artista más favorito, década predominante)
 
-### 📊 Estadísticas
-- Popularidad promedio
-- Artistas únicos
-- Década dominante
-- Duración total
-- Géneros más presentes
+### 🔀 Drag & Drop para Reordenar
+
+**Implementación:** Librería `@dnd-kit/sortable`
+
+```
+src/components/playlist/PlaylistDisplay.jsx
+├── DndContext
+├── SortableContext
+└── TrackCard (useSortable hook)
+```
+
+### 📜 Historial de Playlists
+
+**Archivos:**
+- `src/context/PlaylistContext.js` → `history`, `loadFromHistory()`
+- `src/components/playlist/HistoryPanel.jsx` → Panel desplegable
+
+Guarda automáticamente cada playlist generada con timestamp.
+
+### 🎧 Preview de Canciones (30 segundos)
+
+**Sistema de audio global:**
+- `src/context/AudioContext.js` → Estado del reproductor
+- `src/components/ui/GlobalPlayer.jsx` → Barra inferior tipo Spotify
+
+### 📤 Exportar Playlist como JSON
+
+```javascript
+// PlaylistContext.js
+exportPlaylist() → Descarga archivo .json con toda la información
+```
+
+### 🔗 Compartir Playlist
+
+Genera URL con parámetros codificados para compartir configuración.
+
+### 🔔 Sistema de Notificaciones Toast
+
+**Archivos:**
+- `src/context/ToastContext.js` → Provider y hooks
+- Métodos: `toast.success()`, `toast.error()`, `toast.info()`
+
+### 🌓 Tema Claro/Oscuro
+
+**Archivos:**
+- `src/context/ThemeContext.js` → Toggle y persistencia
+- `src/app/globals.css` → Variables CSS para ambos temas
+
+---
+
+## 🌟 Funcionalidades Extra Añadidas
+
+### 📈 Wrapped Personal (Estilo Spotify)
+
+**Archivo principal:** `src/app/wrapped/page.js`
+
+Una experiencia inmersiva de 7 slides animados que muestra tu resumen musical:
+
+| Slide | Contenido |
+|-------|-----------|
+| 1 | Intro personalizada con nombre del usuario |
+| 2 | Estadísticas generales: playlists, canciones, favoritos, interacciones |
+| 3 | Tu artista #1 con imagen circular y badge dorado |
+| 4 | Top 5 canciones favoritas con carátulas |
+| 5 | Top 5 artistas con barras de porcentaje animadas |
+| 6 | Gráfico de actividad semanal |
+| 7 | Resumen final con botones de acción |
+
+**Características técnicas:**
+- Imagen de fondo dinámica con blur de tus canciones
+- Partículas decorativas flotantes (CSS animations)
+- Transiciones entre slides con animaciones por fases
+- Gradientes de fondo que cambian por slide
+- Datos extraídos de `PlaylistContext.stats`
+
+### 📊 Panel de Estadísticas Avanzado
+
+**Archivo:** `src/app/stats/page.js`
+
+| Métrica | Descripción |
+|---------|-------------|
+| Playlists generadas | Total histórico |
+| Canciones generadas | Suma de todas las canciones |
+| Favoritos guardados | Total en localStorage |
+| Gráfico de actividad | Barras animadas de 7 días |
+
+**Sistema de tracking:** `PlaylistContext.js` → `trackActivity()`, `activityLog`, `getActivityByDay()`
+
+### 🎲 Generación de Canción Individual
+
+**Ubicación:** Dashboard → Botón "Generar Canción"
+
+**Funcionalidad:** `PlaylistContext.js` → `generateSingleTrack()`
+
+**Modal resultante:**
+- Fondo con blur de la carátula del álbum
+- Información detallada: año, duración, popularidad
+- Barra de popularidad visual
+- Botones: favorito, añadir a playlist, generar otra
+
+### ℹ️ Popup de Información de Canción
+
+**Componente:** `src/components/ui/TrackInfoPopup.jsx`
+
+Aparece al mantener el cursor sobre cualquier carátula (~400ms):
+
+| Información | Acciones |
+|-------------|----------|
+| Imagen grande del álbum | Botón de play (si hay preview) |
+| Nombre y artista | Añadir a favoritos |
+| Álbum y año | Añadir/quitar de playlist |
+| Duración | Abrir en Spotify |
+| Barra de popularidad | - |
+
+**Integrado en:**
+- `TrackCard.jsx` (playlist)
+- `FavoriteTrackCard.jsx` (favoritos)
+
+### 🎧 Reproductor Global
+
+**Archivos:**
+- `src/context/AudioContext.js` → `playTrack()`, `togglePlay()`, `seekTo()`, etc.
+- `src/components/ui/GlobalPlayer.jsx` → Componente visual
+
+**Características:**
+| Elemento | Funcionalidad |
+|----------|---------------|
+| Barra de progreso | Clickeable para navegar |
+| Control de volumen | Slider + mute |
+| Info de canción | Carátula, nombre, artista |
+| Favorito rápido | Toggle directo |
+| Badge "Preview 30s" | Indica que es preview |
+
+---
+
+## 🏗️ Arquitectura del Proyecto
+
+```
+src/
+├── app/                          # Next.js App Router
+│   ├── page.js                   # Landing page con login
+│   ├── dashboard/page.js         # Dashboard principal con widgets
+│   ├── favorites/page.js         # Gestión de favoritos
+│   ├── stats/page.js             # Panel de estadísticas
+│   ├── wrapped/page.js           # Wrapped personal
+│   ├── about/page.js             # Página informativa
+│   └── api/                      # API Routes (server-side)
+│       ├── spotify-token/        # OAuth token exchange
+│       ├── refresh-token/        # Token refresh
+│       └── save-playlist/        # Guardar en Spotify
+│
+├── components/
+│   ├── widgets/                  # 6 widgets de preferencias
+│   ├── playlist/                 # PlaylistDisplay, TrackCard, etc.
+│   ├── ui/                       # Componentes reutilizables
+│   └── layout/                   # Header, Footer
+│
+├── context/                      # React Context API
+│   ├── AuthContext.js            # Autenticación
+│   ├── PlaylistContext.js        # Playlist + Favoritos + Stats
+│   ├── AudioContext.js           # Reproductor global
+│   ├── ThemeContext.js           # Tema claro/oscuro
+│   └── ToastContext.js           # Notificaciones
+│
+├── hooks/                        # Custom Hooks
+│   ├── useSpotifyApi.js          # Llamadas a Spotify API
+│   ├── useDebounce.js            # Debounce para búsquedas
+│   └── useLocalStorage.js        # Persistencia local
+│
+└── lib/                          # Utilidades
+    ├── auth.js                   # Funciones OAuth
+    ├── spotify.js                # Wrapper de Spotify API
+    ├── requestQueue.js           # Rate limiting (150 req/min)
+    └── constants.js              # Géneros, décadas, etc.
+```
+
+---
+
+## 🧠 Gestión de Estado
+
+### PlaylistContext (Estado Principal)
+
+```javascript
+// Estados
+playlist          // Array de canciones actuales
+favorites         // Array de favoritos (persistido)
+history           // Historial de playlists
+preferences       // Configuración de widgets
+stats             // Estadísticas de uso
+activityLog       // Log de actividad para gráficos
+
+// Funciones principales
+generatePlaylist()      // Genera playlist basada en preferencias
+generateSingleTrack()   // Genera una canción individual
+toggleFavorite()        // Añade/quita de favoritos
+trackActivity()         // Registra actividad para stats
+getActivityByDay()      // Datos para gráfico de 7 días
+```
+
+### AudioContext (Reproductor)
+
+```javascript
+currentTrack      // Canción actual
+isPlaying         // Estado de reproducción
+progress          // Progreso (0-100)
+volume            // Volumen (0-1)
+
+playTrack(track)  // Reproduce una canción
+togglePlay()      // Play/Pause
+seekTo(percent)   // Navegar en la canción
+```
 
 ---
 
 ## 👨‍💻 Autor
 
-**Proyecto Final - Programación Web 1**  
-Universidad U-tad  
-Grado en Desarrollo de Productos Interactivos
+<div align="center">
+  
+### José Antonio Mota Lucas
+
+**Ingeniería del Software + Título Propio en Videojuegos**
+
+Universidad U-tad · Madrid, España
+
+*Proyecto Final - Programación Web 1*
+
+</div>
 
 ---
 
 ## 📄 Licencia
 
-Este proyecto es para fines educativos. Los datos y contenido musical pertenecen a Spotify AB.
+Proyecto desarrollado con fines educativos. Los datos musicales pertenecen a **Spotify AB**.
 
 ---
 
-## 🙏 Agradecimientos
+<div align="center">
+  
+<sub>Hecho con ❤️ por José Antonio Mota Lucas</sub>
 
-- [Spotify Web API](https://developer.spotify.com/documentation/web-api) por proporcionar acceso a datos musicales
-- [Next.js](https://nextjs.org) por el excelente framework
-- [Tailwind CSS](https://tailwindcss.com) por el sistema de estilos
-- [React Icons](https://react-icons.github.io/react-icons/) por los iconos
+</div>
 
