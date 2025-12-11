@@ -10,6 +10,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { usePlaylist } from '@/context/PlaylistContext';
 import { useAudio } from '@/context/AudioContext';
+import { useToast } from '@/context/ToastContext';
 import TrackInfoPopup from '@/components/ui/TrackInfoPopup';
 
 export default function TrackCard({
@@ -21,6 +22,7 @@ export default function TrackCard({
 }) {
   const { toggleFavorite, isFavorite, addTrackToPlaylist, playlist } = usePlaylist();
   const { playTrack, currentTrack, isPlaying } = useAudio();
+  const toast = useToast();
   const [showMenu, setShowMenu] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const menuRef = useRef(null);
@@ -98,6 +100,10 @@ export default function TrackCard({
   };
 
   const handlePlay = () => {
+    if (!track.preview_url) {
+      toast.error('Esta canción no tiene preview disponible');
+      return;
+    }
     playTrack(track);
   };
 
