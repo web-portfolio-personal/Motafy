@@ -101,6 +101,38 @@
   color: var(--foreground-secondary);
 }
 
+/* Widgets en modo claro - colores más suaves */
+[data-theme="light"] .bg-gradient-to-br.from-purple-900\/40,
+[data-theme="light"] .bg-gradient-to-br.from-blue-900\/40,
+[data-theme="light"] .bg-gradient-to-br.from-green-900\/40,
+[data-theme="light"] .bg-gradient-to-br.from-orange-900\/40,
+[data-theme="light"] .bg-gradient-to-br.from-pink-900\/40,
+[data-theme="light"] .bg-gradient-to-br.from-yellow-900\/40,
+[data-theme="light"] .bg-gradient-to-br.from-cyan-900\/40 {
+  background: var(--background-card) !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: 0 2px 8px var(--shadow-color) !important;
+}
+
+/* Scrollbar en modo claro */
+[data-theme="light"] .custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="light"] .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Footer en modo claro */
+[data-theme="light"] footer {
+  background: var(--background-elevated);
+  border-top: 1px solid var(--border-color);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
