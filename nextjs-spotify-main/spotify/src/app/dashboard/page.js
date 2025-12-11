@@ -286,20 +286,31 @@ const handleGenerate = async () => {
       {/* Modal de canción individual */}
       {showSingleTrackModal && singleTrack && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-          <div className="relative w-full max-w-md bg-gradient-to-br from-purple-900/90 to-pink-900/90 rounded-3xl p-6 border border-white/10 shadow-2xl animate-scale-in">
+          <div className="relative w-full max-w-md bg-gradient-to-br from-purple-900/90 to-pink-900/90 rounded-3xl p-6 border border-white/10 shadow-2xl animate-scale-in overflow-hidden">
+            {/* Fondo con imagen blur */}
+            {singleTrack.album?.images?.[0]?.url && (
+              <div className="absolute inset-0 -z-10">
+                <img
+                  src={singleTrack.album.images[0].url}
+                  alt=""
+                  className="w-full h-full object-cover opacity-20 blur-2xl scale-110"
+                />
+              </div>
+            )}
+
             {/* Botón cerrar */}
             <button
               onClick={() => setShowSingleTrackModal(false)}
-              className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full transition-colors"
+              className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full transition-colors z-10"
             >
               <FiX className="h-5 w-5 text-white/70" />
             </button>
 
-            <div className="text-center">
+            <div className="text-center relative z-10">
               <p className="text-white/60 text-sm uppercase tracking-wider mb-4">Tu canción aleatoria</p>
 
-              {/* Imagen del álbum */}
-              <div className="relative w-48 h-48 mx-auto mb-6 rounded-2xl overflow-hidden shadow-2xl">
+              {/* Imagen del álbum con botón de play */}
+              <div className="relative w-48 h-48 mx-auto mb-6 rounded-2xl overflow-hidden shadow-2xl group">
                 {singleTrack.album?.images?.[0]?.url ? (
                   <img
                     src={singleTrack.album.images[0].url}
@@ -311,27 +322,62 @@ const handleGenerate = async () => {
                     <FiMusic className="h-16 w-16 text-white/30" />
                   </div>
                 )}
-                {/* Preview play button */}
-                {singleTrack.preview_url && (
-                  <a
-                    href={singleTrack.preview_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity"
-                  >
-                    <div className="w-14 h-14 bg-spotify-green rounded-full flex items-center justify-center">
+
+                {/* Overlay con play */}
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  {singleTrack.preview_url ? (
+                    <div className="w-14 h-14 bg-spotify-green rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-transform">
                       <FiPlay className="h-6 w-6 text-black ml-1" />
                     </div>
-                  </a>
+                  ) : (
+                    <div className="px-3 py-1.5 bg-white/20 rounded-full text-xs text-white/80">
+                      Sin preview
+                    </div>
+                  )}
+                </div>
+
+                {/* Badge de preview */}
+                {singleTrack.preview_url && (
+                  <div className="absolute top-2 right-2 px-2 py-1 bg-spotify-green text-black text-xs font-medium rounded-full">
+                    30s
+                  </div>
                 )}
               </div>
 
               {/* Info de la canción */}
               <h2 className="text-xl font-bold text-white mb-1 truncate px-4">{singleTrack.name}</h2>
-              <p className="text-white/70 mb-2">{singleTrack.artists?.map(a => a.name).join(', ')}</p>
-              <p className="text-white/50 text-sm mb-6">{singleTrack.album?.name}</p>
+              <p className="text-white/70 mb-1">{singleTrack.artists?.map(a => a.name).join(', ')}</p>
+              <p className="text-white/50 text-sm mb-4">{singleTrack.album?.name}</p>
 
-{/* Botones de acción */}
+              {/* Stats de la canción */}
+              <div className="grid grid-cols-3 gap-2 mb-6">
+                <div className="p-2 bg-white/10 rounded-xl">
+                  <p className="text-xs text-white/40">Año</p>
+                  <p className="text-sm font-medium text-white">{singleTrack.album?.release_date?.split('-')[0] || 'N/A'}</p>
+                </div>
+                <div className="p-2 bg-white/10 rounded-xl">
+                  <p className="text-xs text-white/40">Duración</p>
+                  <p className="text-sm font-medium text-white">
+                    {singleTrack.duration_ms ? `${Math.floor(singleTrack.duration_ms / 60000)}:${String(Math.floor((singleTrack.duration_ms % 60000) / 1000)).padStart(2, '0')}` : 'N/A'}
+                  </p>
+                </div>
+                <div className="p-2 bg-white/10 rounded-xl">
+                  <p className="text-xs text-white/40">Popularidad</p>
+                  <p className="text-sm font-medium text-white">{singleTrack.popularity || 0}%</p>
+                </div>
+              </div>
+
+              {/* Barra de popularidad */}
+              <div className="mb-6 px-4">
+                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-spotify-green to-green-400 rounded-full"
+                    style={{ width: `${singleTrack.popularity || 0}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Botones de acción */}
               <div className="flex flex-wrap gap-3 justify-center">
                 <button
                   onClick={() => {
