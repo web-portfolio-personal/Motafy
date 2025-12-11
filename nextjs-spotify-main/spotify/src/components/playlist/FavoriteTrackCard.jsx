@@ -4,13 +4,17 @@ import { useState, useRef, useEffect } from 'react';
 import { FiHeart, FiPlay, FiPause, FiMusic, FiInfo } from 'react-icons/fi';
 import { useAudio } from '@/context/AudioContext';
 import { usePlaylist } from '@/context/PlaylistContext';
+import { useToast } from '@/context/ToastContext';
 import TrackInfoPopup from '@/components/ui/TrackInfoPopup';
 
 export default function FavoriteTrackCard({ track, index, viewMode = 'grid' }) {
   const { playTrack, currentTrack, isPlaying } = useAudio();
   const { toggleFavorite, isFavorite, addTrackToPlaylist } = usePlaylist();
+  const toast = useToast();
   const [showInfo, setShowInfo] = useState(false);
-  const infoTimeoutRef = useRef(null);
+  const containerRef = useRef(null);
+  const showTimeoutRef = useRef(null);
+  const hideTimeoutRef = useRef(null);
 
   const favorite = isFavorite(track.id);
   const isCurrentTrack = currentTrack?.id === track.id;
@@ -18,26 +22,55 @@ export default function FavoriteTrackCard({ track, index, viewMode = 'grid' }) {
 
   useEffect(() => {
     return () => {
-      if (infoTimeoutRef.current) clearTimeout(infoTimeoutRef.current);
+      if (showTimeoutRef.current) clearTimeout(showTimeoutRef.current);
+      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
     };
   }, []);
 
   const handleMouseEnter = () => {
-    infoTimeoutRef.current = setTimeout(() => {
+    // Cancelar cualquier hide pendiente
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = null;
+    }
+    // Mostrar después de delay
+    showTimeoutRef.current = setTimeout(() => {
       setShowInfo(true);
     }, 400);
   };
 
   const handleMouseLeave = () => {
-    if (infoTimeoutRef.current) {
-      clearTimeout(infoTimeoutRef.current);
+    // Cancelar cualquier show pendiente
+    if (showTimeoutRef.current) {
+      clearTimeout(showTimeoutRef.current);
+      showTimeoutRef.current = null;
     }
-    setTimeout(() => {
+    // Ocultar después de delay (permite mover al popup)
+    hideTimeoutRef.current = setTimeout(() => {
+      setShowInfo(false);
+    }, 300);
+  };
+
+  const handlePopupMouseEnter = () => {
+    // Cancelar el hide si entramos al popup
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = null;
+    }
+  };
+
+  const handlePopupMouseLeave = () => {
+    // Ocultar cuando salimos del popup
+    hideTimeoutRef.current = setTimeout(() => {
       setShowInfo(false);
     }, 100);
   };
 
   const handlePlay = () => {
+    if (!track.preview_url) {
+      toast.error('Esta canción no tiene preview disponible');
+      return;
+    }
     playTrack(track);
   };
 
@@ -109,6 +142,8 @@ export default function FavoriteTrackCard({ track, index, viewMode = 'grid' }) {
             isInPlaylist={false}
             isPlaying={isThisPlaying}
             hasPreview={!!track.preview_url}
+            onMouseEnter={handlePopupMouseEnter}
+            onMouseLeave={handlePopupMouseLeave}
           />
         </div>
 
@@ -166,6 +201,8 @@ export default function FavoriteTrackCard({ track, index, viewMode = 'grid' }) {
           isInPlaylist={false}
           isPlaying={isThisPlaying}
           hasPreview={!!track.preview_url}
+          onMouseEnter={handlePopupMouseEnter}
+          onMouseLeave={handlePopupMouseLeave}
         />
       </div>
 

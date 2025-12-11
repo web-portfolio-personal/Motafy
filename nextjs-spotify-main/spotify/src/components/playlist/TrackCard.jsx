@@ -24,7 +24,6 @@ export default function TrackCard({
   const [showMenu, setShowMenu] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const menuRef = useRef(null);
-  const infoTimeoutRef = useRef(null);
   const favorite = isFavorite(track.id);
 
   // Verificar si esta es la canción que está sonando
@@ -46,6 +45,10 @@ export default function TrackCard({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  // Importar toast para mensajes
+  const showTimeoutRef = useRef(null);
+  const hideTimeoutRef = useRef(null);
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -56,22 +59,40 @@ export default function TrackCard({
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
-      if (infoTimeoutRef.current) clearTimeout(infoTimeoutRef.current);
+      if (showTimeoutRef.current) clearTimeout(showTimeoutRef.current);
+      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
     };
   }, []);
 
   const handleMouseEnterImage = () => {
-    infoTimeoutRef.current = setTimeout(() => {
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = null;
+    }
+    showTimeoutRef.current = setTimeout(() => {
       setShowInfo(true);
-    }, 400); // 400ms delay antes de mostrar
+    }, 400);
   };
 
   const handleMouseLeaveImage = () => {
-    if (infoTimeoutRef.current) {
-      clearTimeout(infoTimeoutRef.current);
+    if (showTimeoutRef.current) {
+      clearTimeout(showTimeoutRef.current);
+      showTimeoutRef.current = null;
     }
-    // Pequeño delay antes de cerrar para permitir mover al popup
-    setTimeout(() => {
+    hideTimeoutRef.current = setTimeout(() => {
+      setShowInfo(false);
+    }, 300);
+  };
+
+  const handlePopupMouseEnter = () => {
+    if (hideTimeoutRef.current) {
+      clearTimeout(hideTimeoutRef.current);
+      hideTimeoutRef.current = null;
+    }
+  };
+
+  const handlePopupMouseLeave = () => {
+    hideTimeoutRef.current = setTimeout(() => {
       setShowInfo(false);
     }, 100);
   };
@@ -124,6 +145,8 @@ export default function TrackCard({
             isInPlaylist={true}
             isPlaying={isThisPlaying}
             hasPreview={!!track.preview_url}
+            onMouseEnter={handlePopupMouseEnter}
+            onMouseLeave={handlePopupMouseLeave}
           />
         </div>
         <div className="flex-1 min-w-0">
@@ -210,6 +233,8 @@ export default function TrackCard({
           isInPlaylist={true}
           isPlaying={isThisPlaying}
           hasPreview={!!track.preview_url}
+          onMouseEnter={handlePopupMouseEnter}
+          onMouseLeave={handlePopupMouseLeave}
         />
       </div>
 

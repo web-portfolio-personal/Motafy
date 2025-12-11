@@ -17,7 +17,9 @@ export default function TrackInfoPopup({
   isFavorite = false,
   isInPlaylist = false,
   isPlaying = false,
-  hasPreview = false
+  hasPreview = false,
+  onMouseEnter,
+  onMouseLeave
 }) {
   if (!isVisible || !track) return null;
 
@@ -39,10 +41,12 @@ export default function TrackInfoPopup({
     top: 'bottom-full mb-2 left-1/2 -translate-x-1/2'
   };
 
-  return (
+return (
     <div
       className={`absolute ${positionClasses[position]} z-50 w-72 bg-zinc-900/95 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-scale-in`}
       onClick={(e) => e.stopPropagation()}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
       {/* Header con imagen grande */}
       <div className="relative">
