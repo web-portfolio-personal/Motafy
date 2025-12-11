@@ -3,20 +3,19 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  FiHeart, FiMusic, FiGrid, FiList, FiPlay, FiPause, FiSearch, FiBarChart2
+  FiHeart, FiMusic, FiGrid, FiList, FiSearch, FiBarChart2
 } from 'react-icons/fi';
 import { useAuth } from '@/context/AuthContext';
 import { usePlaylist } from '@/context/PlaylistContext';
-import { useAudio } from '@/context/AudioContext';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import FavoriteTrackCard from '@/components/playlist/FavoriteTrackCard';
 
 export default function FavoritesPage() {
   const router = useRouter();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { favorites, toggleFavorite } = usePlaylist();
-  const { playTrack, currentTrack, isPlaying } = useAudio();
 
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
   const [sortBy, setSortBy] = useState('recent'); // 'recent' | 'name' | 'artist' | 'year'
@@ -286,120 +285,23 @@ export default function FavoritesPage() {
               {viewMode === 'grid' ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                   {filteredFavorites.map((track, index) => (
-                    <div
+                    <FavoriteTrackCard
                       key={track.id || index}
-                      className="group bg-[var(--background-elevated)] rounded-xl p-4 border border-[var(--border-color)] hover:border-spotify-green/30 transition-all hover:shadow-lg hover:shadow-spotify-green/5"
-                    >
-                      {/* Imagen del álbum */}
-                      <div className="relative aspect-square mb-3 rounded-lg overflow-hidden bg-[var(--background-highlight)]">
-                        {track.album?.images?.[0]?.url ? (
-                          <img
-                            src={track.album.images[0].url}
-                            alt={track.album.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <FiMusic className="h-8 w-8 text-[var(--foreground-tertiary)]" />
-                          </div>
-                        )}
-                        {/* Overlay con botones */}
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                          {track.preview_url && (
-                            <button
-                              onClick={() => playTrack(track)}
-                              className="w-10 h-10 bg-spotify-green rounded-full flex items-center justify-center hover:scale-110 transition-transform"
-                            >
-                              {currentTrack?.id === track.id && isPlaying ? (
-                                <FiPause className="h-5 w-5 text-black" />
-                              ) : (
-                                <FiPlay className="h-5 w-5 text-black ml-0.5" />
-                              )}
-                            </button>
-                          )}
-                          <button
-                            onClick={() => toggleFavorite(track)}
-                            className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-red-500 transition-colors"
-                          >
-                            <FiHeart className="h-5 w-5 text-white fill-current" />
-                          </button>
-                        </div>
-                      </div>
-                      {/* Info */}
-                      <h3 className="font-medium text-[var(--foreground)] text-sm truncate">
-                        {track.name}
-                      </h3>
-                      <p className="text-xs text-[var(--foreground-secondary)] truncate">
-                        {track.artists?.map(a => a.name).join(', ')}
-                      </p>
-                    </div>
+                      track={track}
+                      index={index}
+                      viewMode="grid"
+                    />
                   ))}
                 </div>
               ) : (
                 <div className="space-y-2">
                   {filteredFavorites.map((track, index) => (
-                    <div
+                    <FavoriteTrackCard
                       key={track.id || index}
-                      className="group flex items-center gap-4 p-3 bg-[var(--background-elevated)] rounded-xl border border-[var(--border-color)] hover:border-spotify-green/30 transition-all"
-                    >
-                      <span className="w-8 text-center text-sm text-[var(--foreground-tertiary)]">
-                        {index + 1}
-                      </span>
-                      {/* Imagen */}
-                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-[var(--background-highlight)] flex-shrink-0">
-                        {track.album?.images?.[0]?.url ? (
-                          <img
-                            src={track.album.images[0].url}
-                            alt={track.album.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <FiMusic className="h-5 w-5 text-[var(--foreground-tertiary)]" />
-                          </div>
-                        )}
-                      </div>
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-[var(--foreground)] truncate">
-                          {track.name}
-                        </h3>
-                        <p className="text-sm text-[var(--foreground-secondary)] truncate">
-                          {track.artists?.map(a => a.name).join(', ')}
-                        </p>
-                      </div>
-                      {/* Álbum */}
-                      <div className="hidden md:block flex-1 min-w-0">
-                        <p className="text-sm text-[var(--foreground-secondary)] truncate">
-                          {track.album?.name}
-                        </p>
-                      </div>
-                      {/* Año */}
-                      <div className="hidden sm:block text-sm text-[var(--foreground-tertiary)]">
-                        {track.album?.release_date?.split('-')[0]}
-                      </div>
-                      {/* Acciones */}
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {track.preview_url && (
-                          <button
-                            onClick={() => playTrack(track)}
-                            className="p-2 hover:bg-spotify-green/20 rounded-full transition-colors"
-                          >
-                            {currentTrack?.id === track.id && isPlaying ? (
-                              <FiPause className="h-4 w-4 text-spotify-green" />
-                            ) : (
-                              <FiPlay className="h-4 w-4 text-spotify-green" />
-                            )}
-                          </button>
-                        )}
-                        <button
-                          onClick={() => toggleFavorite(track)}
-                          className="p-2 hover:bg-red-500/20 rounded-full transition-colors"
-                        >
-                          <FiHeart className="h-4 w-4 text-red-500 fill-current" />
-                        </button>
-                      </div>
-                    </div>
+                      track={track}
+                      index={index}
+                      viewMode="list"
+                    />
                   ))}
                 </div>
               )}

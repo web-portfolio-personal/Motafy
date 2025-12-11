@@ -3,13 +3,14 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   FiHeart, FiX, FiPlay, FiPause, FiMoreHorizontal,
-  FiExternalLink
+  FiExternalLink, FiInfo
 } from 'react-icons/fi';
 import { RxDragHandleDots2 } from 'react-icons/rx';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { usePlaylist } from '@/context/PlaylistContext';
 import { useAudio } from '@/context/AudioContext';
+import TrackInfoPopup from '@/components/ui/TrackInfoPopup';
 
 export default function TrackCard({
   track,
@@ -18,10 +19,12 @@ export default function TrackCard({
   showDragHandle = true,
   compact = false
 }) {
-  const { toggleFavorite, isFavorite } = usePlaylist();
+  const { toggleFavorite, isFavorite, addTrackToPlaylist, playlist } = usePlaylist();
   const { playTrack, currentTrack, isPlaying } = useAudio();
   const [showMenu, setShowMenu] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const menuRef = useRef(null);
+  const infoTimeoutRef = useRef(null);
   const favorite = isFavorite(track.id);
 
   // Verificar si esta es la canción que está sonando
@@ -51,11 +54,29 @@ export default function TrackCard({
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      if (infoTimeoutRef.current) clearTimeout(infoTimeoutRef.current);
+    };
   }, []);
 
+  const handleMouseEnterImage = () => {
+    infoTimeoutRef.current = setTimeout(() => {
+      setShowInfo(true);
+    }, 400); // 400ms delay antes de mostrar
+  };
+
+  const handleMouseLeaveImage = () => {
+    if (infoTimeoutRef.current) {
+      clearTimeout(infoTimeoutRef.current);
+    }
+    // Pequeño delay antes de cerrar para permitir mover al popup
+    setTimeout(() => {
+      setShowInfo(false);
+    }, 100);
+  };
+
   const handlePlay = () => {
-    if (!track.preview_url) return;
     playTrack(track);
   };
 
@@ -73,26 +94,37 @@ export default function TrackCard({
 
   if (compact) {
     return (
-      <div className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg transition-colors group">
+      <div className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg transition-colors group relative">
         <span className="text-sm text-white/40 w-5">{index + 1}</span>
-        <div className="relative">
+        <div
+          className="relative"
+          onMouseEnter={handleMouseEnterImage}
+          onMouseLeave={handleMouseLeaveImage}
+        >
           <img
             src={track.album?.images?.[2]?.url || track.album?.images?.[0]?.url}
             alt={track.name}
-            className={`w-10 h-10 rounded object-cover ${isCurrentTrack ? 'ring-2 ring-spotify-green' : ''}`}
+            className={`w-10 h-10 rounded object-cover cursor-pointer ${isCurrentTrack ? 'ring-2 ring-spotify-green' : ''}`}
           />
-          {track.preview_url && (
-            <button
-              onClick={handlePlay}
-              className="absolute inset-0 flex items-center justify-center bg-black/50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              {isThisPlaying ? (
-                <FiPause className="h-4 w-4 text-white" />
-              ) : (
-                <FiPlay className="h-4 w-4 text-white ml-0.5" />
-              )}
-            </button>
-          )}
+          {/* Icono de info */}
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+            <FiInfo className="h-4 w-4 text-white" />
+          </div>
+
+          {/* Popup de información */}
+          <TrackInfoPopup
+            track={track}
+            isVisible={showInfo}
+            position="right"
+            onPlay={handlePlay}
+            onToggleFavorite={() => toggleFavorite(track)}
+            onAddToPlaylist={() => addTrackToPlaylist?.(track)}
+            onRemoveFromPlaylist={() => onRemove?.(track.id)}
+            isFavorite={favorite}
+            isInPlaylist={true}
+            isPlaying={isThisPlaying}
+            hasPreview={!!track.preview_url}
+          />
         </div>
         <div className="flex-1 min-w-0">
           <p className={`text-sm truncate ${isCurrentTrack ? 'text-spotify-green' : 'text-white'}`}>{track.name}</p>
@@ -100,16 +132,14 @@ export default function TrackCard({
             {track.artists?.map(a => a.name).join(', ')}
           </p>
         </div>
-        {track.preview_url && (
-          <button
-            onClick={handlePlay}
-            className={`p-1.5 rounded-full transition-colors ${
-              isThisPlaying ? 'text-spotify-green' : 'text-white/30 hover:text-white/60'
-            }`}
-          >
-            {isThisPlaying ? <FiPause className="h-4 w-4" /> : <FiPlay className="h-4 w-4" />}
-          </button>
-        )}
+        <button
+          onClick={handlePlay}
+          className={`p-1.5 rounded-full transition-colors ${
+            isThisPlaying ? 'text-spotify-green' : 'text-white/30 hover:text-white/60'
+          }`}
+        >
+          {isThisPlaying ? <FiPause className="h-4 w-4" /> : <FiPlay className="h-4 w-4" />}
+        </button>
         <button
           onClick={() => toggleFavorite(track)}
           className={`p-1.5 rounded-full transition-colors ${
@@ -144,36 +174,49 @@ export default function TrackCard({
         {index + 1}
       </span>
 
-      <div className="relative group/play flex-shrink-0">
+      {/* Imagen con popup */}
+      <div
+        className="relative flex-shrink-0"
+        onMouseEnter={handleMouseEnterImage}
+        onMouseLeave={handleMouseLeaveImage}
+      >
         <img
           src={track.album?.images?.[1]?.url || track.album?.images?.[0]?.url}
           alt={track.name}
-          className={`w-12 h-12 rounded-lg object-cover ${isCurrentTrack ? 'ring-2 ring-spotify-green' : ''}`}
+          className={`w-12 h-12 rounded-lg object-cover cursor-pointer transition-transform hover:scale-105 ${isCurrentTrack ? 'ring-2 ring-spotify-green' : ''}`}
         />
-        {track.preview_url ? (
-          <button
-            onClick={handlePlay}
-            className={`absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg transition-all hover:bg-black/70 ${
-              isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover/play:opacity-100'
-            }`}
-          >
-            {isThisPlaying ? (
-              <FiPause className="h-5 w-5 text-white" />
-            ) : (
-              <FiPlay className="h-5 w-5 text-white ml-0.5" />
-            )}
-          </button>
-        ) : null}
-        {/* Indicador visual de que se puede reproducir */}
-        {track.preview_url && !isThisPlaying && (
-          <div className="absolute bottom-1 right-1 w-4 h-4 bg-spotify-green rounded-full flex items-center justify-center opacity-70">
-            <FiPlay className="h-2 w-2 text-black ml-0.5" />
+        {/* Overlay con icono de info */}
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+          <FiInfo className="h-5 w-5 text-white" />
+        </div>
+
+        {/* Indicador de preview disponible */}
+        {track.preview_url && (
+          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-spotify-green rounded-full flex items-center justify-center shadow-lg">
+            <FiPlay className="h-2.5 w-2.5 text-black ml-0.5" />
           </div>
         )}
+
+        {/* Popup de información */}
+        <TrackInfoPopup
+          track={track}
+          isVisible={showInfo}
+          position="right"
+          onPlay={handlePlay}
+          onToggleFavorite={() => toggleFavorite(track)}
+          onAddToPlaylist={() => addTrackToPlaylist?.(track)}
+          onRemoveFromPlaylist={() => onRemove?.(track.id)}
+          isFavorite={favorite}
+          isInPlaylist={true}
+          isPlaying={isThisPlaying}
+          hasPreview={!!track.preview_url}
+        />
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-white truncate">{track.name}</p>
+        <p className={`font-medium truncate ${isCurrentTrack ? 'text-spotify-green' : 'text-white'}`}>
+          {track.name}
+        </p>
         <p className="text-sm text-white/50 truncate">
           {track.artists?.map(a => a.name).join(', ')}
         </p>
@@ -187,6 +230,7 @@ export default function TrackCard({
         {formatDuration(track.duration_ms)}
       </span>
 
+      {/* Barra de popularidad */}
       <div className="hidden lg:flex items-center gap-1 w-16">
         <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
           <div
@@ -197,42 +241,43 @@ export default function TrackCard({
         <span className="text-xs text-white/40">{track.popularity}</span>
       </div>
 
+      {/* Acciones */}
       <div className="flex items-center gap-1">
-        {/* Botón de play siempre visible */}
-        {track.preview_url && (
-          <button
-            onClick={handlePlay}
-            className={`p-2 rounded-full transition-all ${
-              isThisPlaying 
-                ? 'text-spotify-green bg-spotify-green/20' 
-                : 'text-white/50 hover:text-spotify-green hover:bg-spotify-green/10'
-            }`}
-            title={isThisPlaying ? 'Pausar' : 'Reproducir preview'}
-          >
-            {isThisPlaying ? (
-              <FiPause className="h-5 w-5" />
-            ) : (
-              <FiPlay className="h-5 w-5" />
-            )}
-          </button>
-        )}
+        {/* Botón de play */}
+        <button
+          onClick={handlePlay}
+          className={`p-2 rounded-full transition-all ${
+            isThisPlaying 
+              ? 'text-spotify-green bg-spotify-green/20' 
+              : 'text-white/50 hover:text-spotify-green hover:bg-spotify-green/10'
+          }`}
+          title={track.preview_url ? (isThisPlaying ? 'Pausar' : 'Reproducir preview') : 'Sin preview disponible'}
+        >
+          {isThisPlaying ? (
+            <FiPause className="h-5 w-5" />
+          ) : (
+            <FiPlay className="h-5 w-5" />
+          )}
+        </button>
 
+        {/* Favorito */}
         <button
           onClick={() => toggleFavorite(track)}
           className={`p-2 rounded-full transition-all ${
             favorite 
-              ? 'text-spotify-green hover:scale-110' 
-              : 'text-white/30 hover:text-white/60'
+              ? 'text-pink-500 hover:scale-110' 
+              : 'text-white/30 hover:text-pink-400'
           }`}
           title={favorite ? 'Quitar de favoritos' : 'Añadir a favoritos'}
         >
           <FiHeart className={`h-5 w-5 ${favorite ? 'fill-current' : ''}`} />
         </button>
 
+        {/* Menú */}
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setShowMenu(!showMenu)}
-            className="p-2 text-white/30 hover:text-white/60 opacity-0 group-hover:opacity-100 transition-all rounded-full hover:bg-white/10"
+            className="p-2 text-white/30 hover:text-white/60 transition-all rounded-full hover:bg-white/10"
           >
             <FiMoreHorizontal className="h-5 w-5" />
           </button>
@@ -263,6 +308,7 @@ export default function TrackCard({
           )}
         </div>
 
+        {/* Eliminar */}
         <button
           onClick={() => onRemove?.(track.id)}
           className="p-2 text-white/30 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all rounded-full hover:bg-red-400/10"
