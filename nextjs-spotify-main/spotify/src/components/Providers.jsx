@@ -4,6 +4,8 @@ import { AuthProvider } from '@/context/AuthContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { PlaylistProvider } from '@/context/PlaylistContext';
 import { ToastProvider } from '@/context/ToastContext';
+import { AudioProvider } from '@/context/AudioContext';
+import GlobalPlayer from '@/components/ui/GlobalPlayer';
 
 export default function Providers({ children }) {
   return (
@@ -11,7 +13,10 @@ export default function Providers({ children }) {
       <ToastProvider>
         <AuthProvider>
           <PlaylistProvider>
-            {children}
+            <AudioProvider>
+              {children}
+              <GlobalPlayer />
+            </AudioProvider>
           </PlaylistProvider>
         </AuthProvider>
       </ToastProvider>

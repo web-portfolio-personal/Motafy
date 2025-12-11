@@ -9,6 +9,7 @@ import { RxDragHandleDots2 } from 'react-icons/rx';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { usePlaylist } from '@/context/PlaylistContext';
+import { useAudio } from '@/context/AudioContext';
 
 export default function TrackCard({
   track,
@@ -18,11 +19,14 @@ export default function TrackCard({
   compact = false
 }) {
   const { toggleFavorite, isFavorite } = usePlaylist();
-  const [isPlaying, setIsPlaying] = useState(false);
+  const { playTrack, currentTrack, isPlaying } = useAudio();
   const [showMenu, setShowMenu] = useState(false);
-  const audioRef = useRef(null);
   const menuRef = useRef(null);
   const favorite = isFavorite(track.id);
+
+  // Verificar si esta es la canción que está sonando
+  const isCurrentTrack = currentTrack?.id === track.id;
+  const isThisPlaying = isCurrentTrack && isPlaying;
 
   const {
     attributes,
@@ -50,31 +54,9 @@ export default function TrackCard({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-    };
-  }, []);
-
-  const togglePlay = () => {
+  const handlePlay = () => {
     if (!track.preview_url) return;
-
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-      } else {
-        audioRef.current.play();
-        setIsPlaying(true);
-      }
-    } else {
-      audioRef.current = new Audio(track.preview_url);
-      audioRef.current.onended = () => setIsPlaying(false);
-      audioRef.current.play();
-      setIsPlaying(true);
-    }
+    playTrack(track);
   };
 
   const formatDuration = (ms) => {
@@ -142,14 +124,16 @@ export default function TrackCard({
         <img
           src={track.album?.images?.[1]?.url || track.album?.images?.[0]?.url}
           alt={track.name}
-          className="w-12 h-12 rounded-lg object-cover"
+          className={`w-12 h-12 rounded-lg object-cover ${isCurrentTrack ? 'ring-2 ring-spotify-green' : ''}`}
         />
         {track.preview_url && (
           <button
-            onClick={togglePlay}
-            className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover/play:opacity-100 transition-opacity rounded-lg"
+            onClick={handlePlay}
+            className={`absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg transition-opacity ${
+              isThisPlaying ? 'opacity-100' : 'opacity-0 group-hover/play:opacity-100'
+            }`}
           >
-            {isPlaying ? (
+            {isThisPlaying ? (
               <FiPause className="h-5 w-5 text-white" />
             ) : (
               <FiPlay className="h-5 w-5 text-white ml-0.5" />

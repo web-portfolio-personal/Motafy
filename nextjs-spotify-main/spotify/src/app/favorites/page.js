@@ -3,10 +3,11 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  FiHeart, FiMusic, FiGrid, FiList, FiPlay, FiSearch, FiBarChart2
+  FiHeart, FiMusic, FiGrid, FiList, FiPlay, FiPause, FiSearch, FiBarChart2
 } from 'react-icons/fi';
 import { useAuth } from '@/context/AuthContext';
 import { usePlaylist } from '@/context/PlaylistContext';
+import { useAudio } from '@/context/AudioContext';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -15,6 +16,7 @@ export default function FavoritesPage() {
   const router = useRouter();
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { favorites, toggleFavorite } = usePlaylist();
+  const { playTrack, currentTrack, isPlaying } = useAudio();
 
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
   const [sortBy, setSortBy] = useState('recent'); // 'recent' | 'name' | 'artist' | 'year'
@@ -304,8 +306,15 @@ export default function FavoritesPage() {
                         {/* Overlay con botones */}
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                           {track.preview_url && (
-                            <button className="w-10 h-10 bg-spotify-green rounded-full flex items-center justify-center hover:scale-110 transition-transform">
-                              <FiPlay className="h-5 w-5 text-black ml-0.5" />
+                            <button
+                              onClick={() => playTrack(track)}
+                              className="w-10 h-10 bg-spotify-green rounded-full flex items-center justify-center hover:scale-110 transition-transform"
+                            >
+                              {currentTrack?.id === track.id && isPlaying ? (
+                                <FiPause className="h-5 w-5 text-black" />
+                              ) : (
+                                <FiPlay className="h-5 w-5 text-black ml-0.5" />
+                              )}
                             </button>
                           )}
                           <button
@@ -372,8 +381,15 @@ export default function FavoritesPage() {
                       {/* Acciones */}
                       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         {track.preview_url && (
-                          <button className="p-2 hover:bg-spotify-green/20 rounded-full transition-colors">
-                            <FiPlay className="h-4 w-4 text-spotify-green" />
+                          <button
+                            onClick={() => playTrack(track)}
+                            className="p-2 hover:bg-spotify-green/20 rounded-full transition-colors"
+                          >
+                            {currentTrack?.id === track.id && isPlaying ? (
+                              <FiPause className="h-4 w-4 text-spotify-green" />
+                            ) : (
+                              <FiPlay className="h-4 w-4 text-spotify-green" />
+                            )}
                           </button>
                         )}
                         <button
